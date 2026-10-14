@@ -59,6 +59,13 @@ def _failed_tests(outcome: JobOutcome) -> set[str]:
     }
 
 
+def _out_of_memory(outcome: JobOutcome) -> bool:
+    return any(
+        phase.outcome == "failed" and phase.exception == "MemoryError"
+        for phase in outcome.record.phases
+    )
+
+
 def _tail(text: str, limit: int = 3000) -> str:
     stripped = text.strip()
     return stripped if len(stripped) <= limit else "..." + stripped[-limit:]
@@ -167,7 +174,9 @@ class BaselineRunner:
             return "cancelled"
         if process.timed_out:
             return f"did not finish within {BASELINE_TIMEOUT_S:.0f}s"
-        if process.oom:
+        # Windows enforces the limit by failing allocations, so an over-limit
+        # suite can end as a test failing with MemoryError instead of a kill.
+        if process.oom or _out_of_memory(outcome):
             return (
                 "one run of the suite needs more memory than allowed; raise "
                 "safety.memory_budget or safety.memory_limit"

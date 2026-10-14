@@ -76,9 +76,9 @@ class PosixHandle:
         """Resident memory of the whole group in bytes, when measurable."""
         return _MEMORY.rss(self.process.pid)
 
-    def memory_killed(self) -> bool:
-        """POSIX has no kernel-enforced limit here; the watchdog decides."""
-        return False
+    def peak_after_exit(self) -> int | None:
+        """POSIX keeps no peak for a process group; the watchdog decides."""
+        return None
 
     def close(self) -> None:
         """Release the pipe."""
@@ -120,6 +120,8 @@ def _sample() -> dict[int, int] | None:
 
 
 def _linux_sample() -> dict[int, int] | None:
+    if sys.platform == "win32":
+        return None
     page = os.sysconf("SC_PAGE_SIZE")
     totals: dict[int, int] = {}
     try:

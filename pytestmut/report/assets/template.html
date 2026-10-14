@@ -7,7 +7,7 @@
 <style>
 :root {
   --bg: #fbfbfa; --panel: #ffffff; --ink: #1c1d1f; --muted: #6a6f76;
-  --line: #e3e4e6; --code-bg: #f5f5f3; --accent: #2f5fd0;
+  --line: #e3e4e6; --code-bg: #f5f5f3; --accent: #4f46e5;
   --killed: #1f8a4c; --survived: #cc3340; --no_coverage: #c77700;
   --timeout: #7b4fc9; --error: #b3246b; --other: #8a8f96;
   --killed-bg: #e6f5ec; --survived-bg: #fdeaec; --no_coverage-bg: #fdf1dc;
@@ -16,7 +16,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #16171a; --panel: #1e2024; --ink: #e8e9eb; --muted: #9aa0a8;
-    --line: #2e3137; --code-bg: #1a1c20; --accent: #8fb0ff;
+    --line: #2e3137; --code-bg: #1a1c20; --accent: #a5b4fc;
     --killed: #5fcf8d; --survived: #ff7a85; --no_coverage: #f0b045;
     --timeout: #b79cf2; --error: #f07ab5; --other: #8f959d;
     --killed-bg: #173326; --survived-bg: #40202a; --no_coverage-bg: #3a2c12;
@@ -30,6 +30,9 @@ body {
 }
 main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
 h1 { font-size: 22px; margin: 0 0 4px; }
+.brand { display: flex; align-items: center; gap: 8px; margin: 0 0 18px; font-weight: 700; font-size: 15px; letter-spacing: -0.2px; }
+.brand svg { width: 28px; height: 28px; flex: none; }
+.brand b { color: #f43f5e; font-weight: 700; }
 h2 { font-size: 16px; margin: 32px 0 10px; }
 .meta { color: var(--muted); font-size: 13px; }
 code, pre, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
@@ -126,6 +129,7 @@ details.file > summary::-webkit-details-marker { display: none; }
 </head>
 <body>
 <main>
+  <div class="brand">__LOGO__<span>pytest<b>mut</b></span></div>
   <header id="head"></header>
   <section id="tiles" class="tiles" aria-label="Summary"></section>
   <section id="policies"></section>

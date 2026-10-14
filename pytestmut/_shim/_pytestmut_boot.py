@@ -289,7 +289,8 @@ def _watch_supervisor(supervisor_pid: int) -> None:
             time.sleep(1.0)
             if os.getppid() != supervisor_pid:
                 try:
-                    os.killpg(os.getpgrp(), signal.SIGKILL)
+                    if sys.platform != "win32":
+                        os.killpg(os.getpgrp(), signal.SIGKILL)
                 finally:
                     os._exit(1)
 

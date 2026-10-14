@@ -1,20 +1,30 @@
-# pytestmut
+---
+hide:
+  - navigation
+  - toc
+---
 
-**Find the bugs your tests would miss.**
+# pytestmut { .md-hidden style="display:none" }
 
-pytestmut makes small, deliberate mistakes in your code, one at a time, and
-runs your pytest suite against each of them. If a test fails, the mistake was
-caught. If every test still passes, you have found a place where a real bug
-could hide, and pytestmut tells you what kind of test would catch it.
+<div class="pm-hero" markdown>
 
-```python
-def discount(amount: float, loyal: bool) -> float:
-    if amount > 100 and loyal:      # pytestmut tries: amount >= 100
-        return amount * 0.1         #                 amount > 101
-    return 0.0                      #                 amount > 100 or loyal
-```
+![pytestmut](assets/logo-wordmark-light.svg#only-light)
+![pytestmut](assets/logo-wordmark-dark.svg#only-dark)
+
+<p class="pm-tagline">Find the bugs your tests would miss.</p>
+
+<p class="pm-sub">pytestmut makes small, deliberate mistakes in your code and runs
+your pytest suite against each one. Every mistake that slips through comes back
+with the test that would catch it.</p>
+
+[Get started](getting-started.md){ .md-button .md-button--primary }
+[Use it with a coding agent](guides/agents.md){ .md-button }
+[GitHub](https://github.com/martincjespersen/pytestmut){ .md-button }
+
+</div>
 
 ```text
+$ pytestmut run
   src/shop/pricing.py:8  cmp.boundary  [7bf19b971895]  in discount
       - if amount > 100 and loyal:
       + if amount >= 100 and loyal:
@@ -29,37 +39,76 @@ you which code your tests **check**.
 
 ## Why pytestmut
 
-- **Correct results first.** A mutant only counts as caught when a test that
-  normally passes fails with that mutant active. Crashes, flaky tests and
-  slow machines are never mistaken for caught mutants.
-- **Safe to run.** Your files are never modified, test processes are contained
-  and cleaned up, and memory use stays within a budget.
-- **Fast enough to use daily.** Each mutant runs only the tests that reach it,
-  in parallel, and results are cached between runs.
-- **Strict where it matters.** Give critical code its own thresholds, its own
-  mutation types and its own rules for exceptions.
-- **Built for review.** Every missed mutant says what changed, which tests ran
-  it, and what test would catch it, in a form people and coding agents can act
-  on.
-- **Fits your workflow.** Terminal, pre-commit, CI, an HTML report in your docs
-  site, or `pytest --mutate`.
+<div class="grid cards" markdown>
+
+-   :material-check-decagram:{ .lg .middle } **Correct results first**
+
+    ---
+
+    A mutant only counts as caught when a test that normally passes fails with
+    it active. Crashes, flaky tests and slow machines never count.
+
+-   :material-shield-check:{ .lg .middle } **Safe to run anywhere**
+
+    ---
+
+    Your files are never modified. Test processes are contained, cleaned up and
+    held to a memory budget, and credentials are kept out of their reach.
+
+-   :material-speedometer:{ .lg .middle } **Fast enough for every day**
+
+    ---
+
+    Each mutant runs only the tests that reach it, in parallel, and verdicts are
+    cached between runs.
+
+-   :material-lock-check:{ .lg .middle } **Strict where it matters**
+
+    ---
+
+    Give critical code its own thresholds, mutation types and rules for
+    exceptions.
+
+    [:octicons-arrow-right-24: Policies](guides/policies.md)
+
+-   :material-robot:{ .lg .middle } **Built for review**
+
+    ---
+
+    Every missed mutant says what changed, which tests ran it, and what test
+    would catch it, for people and coding agents alike.
+
+    [:octicons-arrow-right-24: Coding agents](guides/agents.md)
+
+-   :material-source-branch:{ .lg .middle } **Fits your workflow**
+
+    ---
+
+    Terminal, pre-commit, CI, `pytest --mutate`, or an HTML report in your docs
+    site.
+
+    [:octicons-arrow-right-24: CI/CD](guides/ci.md)
+
+</div>
 
 ## Find your way
 
-| I want to... | Go to |
-|---|---|
-| try it on my project for the first time | [Getting started](getting-started.md) |
-| understand the report and the score | [Reading the results](guides/results.md) |
-| test only some code, or only some tests | [Choosing what to test](guides/scoping.md) |
-| hold critical code to stricter rules | [Strict rules for critical code](guides/policies.md) |
-| stop certain code from being mutated | [Leaving code alone](guides/suppressing.md) |
-| check changes before every commit | [Pre-commit](guides/pre-commit.md) |
-| fail a pipeline below a threshold | [CI/CD](guides/ci.md) |
-| let a coding agent review its own tests | [Coding agents](guides/agents.md) |
-| publish the report with my docs | [Reports in your docs site](guides/docs-site.md) |
-| make runs faster or lighter | [Speed and memory](guides/performance.md) |
-| fix an error message | [Troubleshooting](guides/troubleshooting.md) |
-| look up a command, setting or operator | [Command line](reference/cli.md), [Configuration](reference/configuration.md), [Mutation operators](reference/operators.md) |
+<div class="grid cards" markdown>
+
+- :material-rocket-launch: [**Getting started**](getting-started.md): from first run to every mutant caught
+- :material-file-chart: [**Reading the results**](guides/results.md): statuses, scores and reports
+- :material-target: [**Choosing what to test**](guides/scoping.md): changed lines, specific tests, specific code
+- :material-eye-off: [**Leaving code alone**](guides/suppressing.md): built-in rules and skip comments
+- :material-lock-check: [**Strict rules for critical code**](guides/policies.md): per-area thresholds
+- :material-source-commit: [**Pre-commit**](guides/pre-commit.md): check changes before each commit
+- :material-pipe: [**CI/CD**](guides/ci.md): gate pipelines, publish reports
+- :material-robot: [**Coding agents**](guides/agents.md): let an agent review its own tests
+- :material-book-open-variant: [**Reports in your docs site**](guides/docs-site.md): MkDocs and Read the Docs
+- :material-tune: [**Speed and memory**](guides/performance.md): workers, budgets, timeouts
+- :material-lifebuoy: [**Troubleshooting**](guides/troubleshooting.md): every error message, explained
+- :material-console: [**Command line**](reference/cli.md) · [**Configuration**](reference/configuration.md) · [**Operators**](reference/operators.md)
+
+</div>
 
 ## Requirements
 

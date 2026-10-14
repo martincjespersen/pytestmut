@@ -183,9 +183,14 @@ class LocalSupervisor:
         except subprocess.TimeoutExpired:
             returncode = None
         drain.join(timeout=5)
+        # A kernel-enforced limit fails allocations faster than the poll above
+        # sees them; the recorded peak still shows the tree went over.
+        final = handle.peak_after_exit()
         handle.close()
-        if handle.memory_killed():
-            oom = True
+        if final is not None:
+            peak = max(peak, final)
+            if spec.memory_limit and final > spec.memory_limit:
+                oom = True
         return ProcessOutcome(
             returncode=returncode,
             timed_out=timed_out,
@@ -206,8 +211,8 @@ class _Handle(Protocol):
     def tree_rss(self) -> int | None:
         """Memory in use by the process tree, when measurable."""
 
-    def memory_killed(self) -> bool:
-        """True when the platform ended the tree for exceeding its limit."""
+    def peak_after_exit(self) -> int | None:
+        """Peak memory of the finished tree, when the platform records one."""
 
     def close(self) -> None:
         """Release handles held for the run."""

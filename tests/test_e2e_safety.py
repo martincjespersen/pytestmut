@@ -315,6 +315,27 @@ def test_hungry():
     assert "needs more memory than allowed" in run.stderr
 
 
+def test_baseline_memory_error_is_reported_as_memory(
+    make_project: ProjectFactory,
+) -> None:
+    # How an over-limit suite ends on Windows: the job refuses the allocation.
+    root = make_project(
+        {
+            "pyproject.toml": CONFIG,
+            "calc.py": CALC,
+            "tests/test_calc.py": CALC_TESTS
+            + """
+
+def test_refused():
+    raise MemoryError
+""",
+        }
+    )
+    run = run_tool(root, "run", "--no-cache")
+    assert run.exit_code == 3
+    assert "needs more memory than allowed" in run.stderr
+
+
 def test_tests_get_temp_directories_outside_the_project(
     make_project: ProjectFactory,
 ) -> None:

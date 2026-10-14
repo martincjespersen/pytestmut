@@ -57,7 +57,7 @@ class Tracer:
 
     def start(self) -> None:
         """Begin tracing in this process."""
-        if hasattr(sys, "monitoring"):
+        if sys.version_info >= (3, 12):
             self._start_monitoring()
         else:
             self._start_settrace()
@@ -72,7 +72,8 @@ class Tracer:
         self._context = context
         self._current = self._data.setdefault(context, set())
         if self._tool is not None:
-            sys.monitoring.restart_events()
+            if sys.version_info >= (3, 12):
+                sys.monitoring.restart_events()
         elif self.mechanism == "settrace" and sys.gettrace() is not self._trace:
             # A test replaced the trace function, so the context that just
             # ended has an incomplete line set.
@@ -86,9 +87,9 @@ class Tracer:
             ``{context: {file index as text: sorted lines}}``.
         """
         if self._tool is not None:
-            monitoring = sys.monitoring
-            monitoring.set_events(self._tool, 0)
-            monitoring.free_tool_id(self._tool)
+            if sys.version_info >= (3, 12):
+                sys.monitoring.set_events(self._tool, 0)
+                sys.monitoring.free_tool_id(self._tool)
             self._tool = None
         elif self.mechanism == "settrace":
             sys.settrace(None)
@@ -102,6 +103,8 @@ class Tracer:
         return result
 
     def _start_monitoring(self) -> None:
+        if sys.version_info < (3, 12):
+            return
         monitoring = sys.monitoring
         events = monitoring.events
         for candidate in (4, 3, 2, 1):

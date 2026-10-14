@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 import nox
 from nox import Session, session
@@ -7,12 +8,14 @@ CODE_DIRECTORIES = ["noxfile.py", "pytestmut", "tests", "docs/hooks"]
 DEFAULT_PYTHON_VERSION = False
 DEFAULT_VENV_BACKEND = "none"
 MINIMAL_CODE_COVERAGE = 70
+LICENSE_REPORT = Path("build", "licenses.md")
 PYTHON_VERSIONS = ["3.10", "3.11", "3.12", "3.13"]
 
 # Specify default tasks
 nox.options.sessions = [
     "Check Code Format",
     "Import Checking",
+    "License Checking",
     "Lint Checking",
     "Type Checking",
     "Unit Tests",
@@ -50,7 +53,24 @@ def import_checking(session: Session) -> None:
 )
 def license_checking(session: Session) -> None:
     """Checks dependency licenses using loglicense"""
-    session.run("loglicense", "check", "--dependency-file", "uv.lock")
+    license_report(session)
+
+
+def license_report(session: Session, success_codes: list[int] | None = None) -> None:
+    """
+    Checks dependency licenses against .loglicense and writes the table the
+    docs publish as the license report
+    """
+    LICENSE_REPORT.parent.mkdir(parents=True, exist_ok=True)
+    session.run(
+        "loglicense",
+        "check",
+        "--dependency-file",
+        "uv.lock",
+        "--output-file",
+        str(LICENSE_REPORT),
+        success_codes=success_codes or [0],
+    )
 
 
 @session(
@@ -171,6 +191,18 @@ def mutation_report(session: Session) -> None:
     )
 
 
+def docs_reports(session: Session) -> None:
+    """
+    Refreshes the reports the docs publish
+
+    Like a missed mutation threshold, a failed license check (exit code 1 or
+    2) still writes a report worth reading, so it does not stop the docs. The
+    License Checking session is the gate.
+    """
+    mutation_report(session)
+    license_report(session, success_codes=[0, 1, 2])
+
+
 @session(
     name="Serve Docs",
     python=DEFAULT_PYTHON_VERSION,
@@ -178,9 +210,9 @@ def mutation_report(session: Session) -> None:
 )
 def serve_docs(session: Session) -> None:
     """
-    Serves the docs with a fresh mutation testing report
+    Serves the docs with fresh mutation testing and license reports
     """
-    mutation_report(session)
+    docs_reports(session)
     session.run("mkdocs", "serve", *session.posargs)
 
 
@@ -191,7 +223,7 @@ def serve_docs(session: Session) -> None:
 )
 def build_docs(session: Session) -> None:
     """
-    Builds the docs with a fresh mutation testing report
+    Builds the docs with fresh mutation testing and license reports
     """
-    mutation_report(session)
+    docs_reports(session)
     session.run("mkdocs", "build")

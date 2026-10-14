@@ -11,6 +11,12 @@ repos:
         entry: nox -s 'Import Checking' --
         language: python
         types_or: [python]
+      - id: loglicense
+        name: License Checking (loglicense)
+        entry: nox -s 'License Checking'
+        pass_filenames: false
+        language: python
+        files: ^(uv\.lock|pyproject\.toml|\.loglicense)$
       - id: flake8
         name: Lint Checking (flake8)
         entry: nox -s 'Lint Checking' --

@@ -1,0 +1,116 @@
+/* pytestmut brand: indigo strands, teal for "caught", coral for "mutated". */
+
+:root {
+  --pm-indigo: #4f46e5;
+  --pm-indigo-dark: #312e81;
+  --pm-night: #1e1b4b;
+  --pm-teal: #14b8a6;
+  --pm-coral: #f43f5e;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--pm-indigo);
+  --md-primary-fg-color--light: #6366f1;
+  --md-primary-fg-color--dark: var(--pm-indigo-dark);
+  --md-accent-fg-color: #0d9488;
+  --md-accent-fg-color--transparent: rgba(13, 148, 136, 0.1);
+  --md-typeset-a-color: #4338ca;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 240;
+  --md-primary-fg-color: var(--pm-night);
+  --md-primary-fg-color--light: #312e81;
+  --md-primary-fg-color--dark: #0f0d2e;
+  --md-accent-fg-color: #2dd4bf;
+  --md-accent-fg-color--transparent: rgba(45, 212, 191, 0.12);
+  --md-typeset-a-color: #a5b4fc;
+  --md-default-bg-color: #0f1020;
+}
+
+/* Header and tabs: a quiet gradient instead of a flat block. */
+.md-header,
+.md-tabs {
+  background: linear-gradient(90deg, var(--pm-night) 0%, var(--pm-indigo-dark) 55%, var(--pm-indigo) 100%);
+}
+[data-md-color-scheme="slate"] .md-header,
+[data-md-color-scheme="slate"] .md-tabs {
+  background: linear-gradient(90deg, #0b0a24 0%, var(--pm-night) 60%, #312e81 100%);
+}
+.md-header__button.md-logo img {
+  height: 1.6rem;
+  border-radius: 0.3rem;
+}
+
+/* Home page hero. */
+.pm-hero {
+  text-align: center;
+  padding: 1.2rem 0 0.4rem;
+}
+.pm-hero img {
+  width: min(420px, 90%);
+}
+.pm-hero .pm-tagline {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.3rem;
+}
+.pm-hero .pm-sub {
+  color: var(--md-default-fg-color--light);
+  max-width: 36rem;
+  margin: 0 auto 1.2rem;
+}
+.pm-hero .md-button {
+  margin: 0.25rem;
+}
+.md-typeset .md-button--primary {
+  background-color: var(--pm-indigo);
+  border-color: var(--pm-indigo);
+}
+.md-typeset .md-button--primary:hover {
+  background-color: #4338ca;
+  border-color: #4338ca;
+}
+.md-typeset .md-button:not(.md-button--primary):hover {
+  color: var(--md-accent-fg-color);
+  border-color: var(--md-accent-fg-color);
+  background: transparent;
+}
+
+/* Cards: a coloured edge on hover. */
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid > .card {
+  border-radius: 0.6rem;
+  transition: border-color 125ms, box-shadow 125ms;
+}
+.md-typeset .grid.cards > ul > li:hover {
+  border-color: var(--pm-indigo);
+  box-shadow: 0 0.2rem 0.8rem rgba(79, 70, 229, 0.15);
+}
+.md-typeset .grid.cards .lg {
+  color: var(--pm-indigo);
+}
+[data-md-color-scheme="slate"] .md-typeset .grid.cards .lg {
+  color: #a5b4fc;
+}
+
+/* Terminal output blocks read a little denser. */
+.md-typeset pre > code {
+  font-size: 0.78rem;
+}
+
+/* In dark mode the primary colour is the near-black header indigo; buttons
+   and other primary-coloured elements need a lighter tone to be seen. */
+[data-md-color-scheme="slate"] .md-typeset .md-button {
+  color: #c7d2fe;
+  border-color: #6366f1;
+}
+[data-md-color-scheme="slate"] .md-typeset .md-button--primary {
+  color: #ffffff;
+  background-color: var(--pm-indigo);
+  border-color: var(--pm-indigo);
+}
+[data-md-color-scheme="slate"] .md-nav__link--active,
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link--active {
+  color: #a5b4fc;
+}
