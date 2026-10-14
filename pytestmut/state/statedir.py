@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -133,7 +134,7 @@ class StateDir:
             holder = int(lock.read_text(encoding="utf-8").strip() or "0")
         except (OSError, ValueError):
             holder = 0
-        if holder and holder != os.getpid() and _alive(holder):
+        if holder and holder != os.getpid() and process_alive(holder):
             raise self._refuse(f"in use by another run (pid {holder})")
         lock.write_text(str(os.getpid()), encoding="utf-8")
         self._locked = True
@@ -242,12 +243,23 @@ def _sweep_stale(parent: Path) -> None:
             owner = int(marker.get("pid", 0))
         except (OSError, ValueError, AttributeError, TypeError):
             continue
-        if marker.get("tool") == TOOL_NAME and owner and not _alive(owner):
+        if marker.get("tool") == TOOL_NAME and owner and not process_alive(owner):
             _remove_tree(item)
 
 
-def _alive(pid: int) -> bool:
-    """Tell whether a process exists, without disturbing it."""
+def process_alive(pid: int) -> bool:
+    """Tell whether a process is running, without disturbing it.
+
+    A zombie, a process that has exited but was not yet reaped by its parent,
+    counts as dead. Containers without an init process never reap orphans, so
+    a killed orphan stays a zombie there for good.
+
+    Arguments:
+        pid: Process id.
+
+    Returns:
+        True while the process runs.
+    """
     if sys.platform == "win32":
         import ctypes
 
@@ -271,7 +283,28 @@ def _alive(pid: int) -> bool:
         return False
     except PermissionError:
         return True
-    return True
+    return not _zombie(pid)
+
+
+def _zombie(pid: int) -> bool:
+    """True when the process has exited and only awaits reaping."""
+    try:
+        with open(f"/proc/{pid}/stat", "rb") as handle:
+            # The state follows the command name, which may contain spaces.
+            return handle.read().rsplit(b")", 1)[1].split()[0] == b"Z"
+    except (OSError, IndexError):
+        pass
+    try:
+        state = subprocess.run(
+            ["ps", "-o", "stat=", "-p", str(pid)],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return state.strip().startswith("Z")
 
 
 def _remove_tree(path: Path) -> None:

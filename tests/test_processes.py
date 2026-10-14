@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import threading
@@ -31,7 +32,7 @@ from pytestmut.exec.environment import SHIM_DIR, build_environment
 from pytestmut.exec.supervisor import LocalSupervisor, ProcessSpec
 from pytestmut.pytest_integration.cmdline import build_argv, filter_inherited
 from pytestmut.pytest_integration.probe import PytestEnvironment
-from pytestmut.state.statedir import RunDir, StateDir
+from pytestmut.state.statedir import RunDir, StateDir, process_alive
 
 
 def _spec(
@@ -46,27 +47,10 @@ def _spec(
     )
 
 
-def _alive(pid: int) -> bool:
-    if sys.platform == "win32":
-        import subprocess
-
-        listing = subprocess.run(
-            ["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True
-        ).stdout
-        return str(pid) in listing
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
-
-
 def _wait_dead(pid: int, seconds: float = 5.0) -> bool:
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
-        if not _alive(pid):
+        if not process_alive(pid):
             return True
         time.sleep(0.05)
     return False
@@ -185,6 +169,20 @@ def test_peak_recorded_by_the_platform_counts_after_exit(
     assert outcome.oom and outcome.peak_rss == limit + 1
     unlimited = LocalSupervisor().run(_spec("pass", tmp_path), threading.Event())
     assert not unlimited.oom
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no zombies")
+def test_a_zombie_counts_as_dead() -> None:
+    # What a killed orphan looks like in a container with no init process to
+    # reap it: os.kill(pid, 0) still succeeds, but the process is gone.
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    try:
+        assert process_alive(child.pid)
+        child.kill()  # SIGKILL, and not reaped: a zombie
+        assert _wait_dead(child.pid)
+    finally:
+        child.kill()
+        child.wait()
 
 
 def test_cancel_stops_a_running_process(tmp_path: Path) -> None:
