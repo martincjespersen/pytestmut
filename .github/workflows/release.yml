@@ -4,8 +4,13 @@ name: Release
 # pytestmut/_meta.py is not on PyPI yet. Pushes that keep the version are
 # skipped: PyPI never accepts the same version twice.
 #
-# One-time setup: add a trusted publisher on PyPI for this repository, with
-# workflow "release.yml" and environment "pypi".
+# Order: build and check, publish to TestPyPI, download the wheel TestPyPI
+# serves and check it is the one built, then publish to PyPI and tag a
+# GitHub release. A failure at any step stops the release before PyPI.
+#
+# One-time setup: trusted publishers for this repository with workflow
+# "release.yml", on TestPyPI with environment "testpypi" and on PyPI with
+# environment "pypi".
 on:
   workflow_run:
     workflows: [CI]
@@ -109,9 +114,75 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/pytestmut/${{ needs.check.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          # A re-run after a failed PyPI upload finds this version already
+          # on TestPyPI; that must not stop the release.
+          skip-existing: true
+
+  verify-testpypi:
+    name: Install from TestPyPI
+    needs: [check, publish-testpypi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.13"
+      - name: Download the wheel TestPyPI serves and compare it with the build
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          # The index can take a minute to list a new upload.
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if uvx --from pip pip download --no-deps --only-binary :all: \
+                --index-url https://test.pypi.org/simple/ \
+                --dest served "pytestmut==$VERSION"; then
+              break
+            fi
+            if [ "$attempt" = 10 ]; then
+              echo "::error::TestPyPI does not serve pytestmut $VERSION"
+              exit 1
+            fi
+            sleep 30
+          done
+          wheel="pytestmut-$VERSION-py3-none-any.whl"
+          built=$(sha256sum "dist/$wheel" | cut -d' ' -f1)
+          served=$(sha256sum "served/$wheel" | cut -d' ' -f1)
+          if [ "$built" != "$served" ]; then
+            echo "::error::TestPyPI serves a different wheel than this run built"
+            exit 1
+          fi
+      - name: Install the served wheel and run it
+        run: |
+          # Only pytestmut comes from TestPyPI; its dependencies come from
+          # PyPI, so nothing else can be substituted from the test index.
+          uv venv .smoke
+          uv pip install --python .smoke/bin/python served/*.whl
+          .smoke/bin/pytestmut --version
+          .smoke/bin/pytestmut operators > /dev/null
+
   publish:
     name: Publish to PyPI
-    needs: [check, build]
+    needs: [check, verify-testpypi]
     runs-on: ubuntu-latest
     environment:
       name: pypi

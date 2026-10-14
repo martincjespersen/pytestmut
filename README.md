@@ -137,8 +137,8 @@ uv run nox -s "Serve Docs"        # the docs, with fresh mutation and license re
 
 **Releasing:** bump `__version__` in `pytestmut/_meta.py` and merge to `main`.
 Once CI passes, the release workflow builds and checks the package, publishes
-it to PyPI, and tags a GitHub release. Pushes that keep the version publish
-nothing.
+it to TestPyPI, verifies what TestPyPI serves, then publishes it to PyPI and
+tags a GitHub release. Pushes that keep the version publish nothing.
 
 ## License
 
