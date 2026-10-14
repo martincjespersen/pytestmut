@@ -1,0 +1,22 @@
+- id: pytestmut
+  name: mutation testing (changed lines)
+  description: >-
+    Mutates only the lines you changed and fails when a policy threshold is
+    missed. Runs in your project environment, which must have pytestmut and
+    your test dependencies installed.
+  entry: pytestmut run --hook
+  language: system
+  pass_filenames: false
+  require_serial: true
+  types: [python]
+- id: pytestmut-full
+  name: mutation testing (whole project)
+  description: >-
+    Mutates every configured path, reusing cached verdicts. Too slow for every
+    commit on most projects, so it runs before a push or on demand.
+  entry: pytestmut run
+  language: system
+  pass_filenames: false
+  require_serial: true
+  types: [python]
+  stages: [pre-push, manual]
