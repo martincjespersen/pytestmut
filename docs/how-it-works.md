@@ -30,7 +30,9 @@ Each step exists because skipping it lets a wrong number through.
    Lines run at import time, and setup of shared fixtures, are attributed to
    every test that depends on them. Mutants in cached functions, and in the
    module's own helpers they call, run against every test: a test that gets
-   a cached result never executes them, yet depends on them.
+   a cached result never executes them, yet depends on them. Such a mutant
+   first runs just the tests that execute its lines, which usually settle it
+   in a second; only if they don't does it face the whole suite.
 8. **Self-check.** One file gets a mutation that raises at import. If that is
    not reported as killed, the run stops: mutations are not reaching the
    tests.
@@ -107,8 +109,9 @@ one of these:
 - **Code pytestmut cannot intercept** is reported as `unsupported`, never
   silently scored: files pytest rewrites itself, compiled extensions, and code
   read with `open()`.
-- **Import-time and cached code is tested against the whole suite**, which
-  costs time on large projects.
+- **Import-time and cached code can need the whole suite**: when the tests
+  that execute a mutant's lines don't catch it, every test runs, which costs
+  time on large projects.
 - **Memory limits on Linux and macOS are enforced by polling** five times a
   second, so a very fast allocation can overshoot briefly.
 - **A child process that starts its own session** escapes the process-group

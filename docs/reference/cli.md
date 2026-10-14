@@ -23,6 +23,7 @@ pytestmut run [PATHS]... [OPTIONS]
 | `--hook` | Pre-commit mode: staged lines (or pushed lines on `pre-push`), capped and time-boxed |
 | `--workers`, `-j N` | Mutants tested at once |
 | `--max-memory SIZE` | Memory all test processes together may use, e.g. `4GiB`, or `off` |
+| `--time-limit SECONDS` | No new mutant starts after this many seconds. The rest are reported as `not_run`, the report is marked partial, and the run exits 1 at best |
 | `--level LEVEL` | Mutation operators for the default policy: `core`, `extended` or `all` |
 | `--min-score PERCENT` | Minimum score of the default policy |
 | `--selection MODE` | `coverage` (only tests that reach a mutant) or `all` |

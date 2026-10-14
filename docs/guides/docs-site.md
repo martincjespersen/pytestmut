@@ -134,7 +134,8 @@ build:
     pre_build:
       - >-
         timeout --kill-after=60 600
-        python -m pytestmut run --quiet --report text --report html --max-memory 3GiB
+        python -m pytestmut run --report text --report html
+        --max-memory 3GiB --time-limit 420
         || test $? -le 1 -o $? -eq 124 -o $? -eq 137
 
 python:
@@ -154,9 +155,14 @@ What the `pre_build` step does:
 - **Refreshes the report** before MkDocs runs, so the hook above picks it up.
 - **Publishes even when thresholds are missed:** exit code 1 still lets the
   build continue.
-- **Stays inside the build time limit.** Free builds get 15 minutes and 7 GB
-  of memory. `timeout` stops a run that takes longer than 10 minutes,
-  pytestmut cleans up, and the page explains that no report was generated.
+- **Stays inside the build time limit.** Free builds get 15 minutes, 7 GB
+  of memory and few CPUs.
+  - `--time-limit 420` stops starting mutants after 7 minutes. The rest are
+    reported as not run, the report is marked partial, and the docs still
+    publish.
+  - `timeout` is the backstop. If the run still outlasts 10 minutes, it is
+    stopped, pytestmut cleans up, and the page explains that no report was
+    generated.
 - **Stops the build on real problems:** broken tests or bad configuration
   (exit codes 2 to 5).
 - **Stays within memory:** `--max-memory 3GiB` leaves room for the rest of the
@@ -179,6 +185,6 @@ Then, once:
    settings, enable building pull requests.
 
 !!! tip "Large test suites"
-    If the mutation run regularly hits the 10-minute cap, narrow what the docs
-    build tests: point `paths` at your critical modules, or run the full
-    report in CI and keep the docs build to a smaller scope.
+    If the report is regularly partial, narrow what the docs build tests:
+    point `paths` at your critical modules, or run the full report in CI and
+    keep the docs build to a smaller scope.

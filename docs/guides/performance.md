@@ -7,7 +7,8 @@ once.
 ## What is already done for you
 
 - **Test selection.** Each mutant runs only the tests that execute its line,
-  stopping at the first failure.
+  stopping at the first failure. Mutants that must face the whole suite
+  (import-time and cached code) first try the tests that execute their line.
 - **Parallel workers.** By default there is one worker per CPU the process may
   use, container limits included.
 - **Caching.** A mutant killed before is checked again with just its one
@@ -25,6 +26,7 @@ once.
 | Slow integration tests are not needed to judge mutants | `[tool.pytestmut.pytest] args = ["-m", "not slow"]` |
 | Endless-loop mutants take long to time out | lower `timeout.floor_seconds` or `timeout.factor` |
 | A clean slate is not needed every time | keep the cache: don't pass `--no-cache` |
+| The run must end by a deadline (docs builders, time-limited CI) | `--time-limit 420`: no mutant starts after 7 minutes, and the report is marked partial |
 
 ## Control memory
 

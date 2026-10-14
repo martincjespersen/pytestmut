@@ -7,8 +7,11 @@ each ambiguous outcome gets a follow-up before it is final:
   unmutated control run of the same tests;
 - a kill with no failing test (import or collection error) needs the same
   tests to start cleanly without the mutant;
-- the first kill credited to a test in a narrowed selection needs that test to
-  pass on its own, otherwise it depends on tests that were left out;
+- the first kill credited to a test in a narrowed or reordered selection needs
+  that test to pass on its own, otherwise it depends on tests that were left
+  out or ran earlier;
+- a mutant that faces the whole suite first runs just the tests that reach its
+  lines, and faces the suite only if they don't settle it;
 - an error is retried once.
 """
 
@@ -41,6 +44,9 @@ BUDGET_EXHAUSTED = "time budget exhausted"
 # Test ids kept per verdict, enough to point at the tests to improve.
 LISTED_TESTS = 10
 _MAX_ROUNDS = 4
+# Outcomes of a whole-suite mutant's reaching tests that need no full run; the
+# usual confirmations still apply to them.
+_PROBE_SETTLES = frozenset({Status.KILLED, Status.TIMEOUT, Status.OOM})
 _THROTTLE_SAMPLE = 50
 _THROTTLE_RATIO = 0.10
 
@@ -219,11 +225,16 @@ class MutantExecutor:
         prune: tuple[str, ...] | None,
         worker: int,
         budget: float,
+        first: tuple[str, ...] = (),
     ) -> JobOutcome:
         order: tuple[str, ...] | None = None
         if self._reordered:
             durations = self._baseline.durations
             order = tuple(sorted(nodeids, key=lambda n: durations.get(n, 0.0)))
+        elif first:
+            # Tests that reach the mutated lines are the likeliest to kill.
+            early = set(first)
+            order = tuple(first) + tuple(n for n in nodeids if n not in early)
         job = Job(
             id=self._next_id("m" if mutant is not None else "c"),
             mode=MUTATE if mutant is not None else CONTROL,
@@ -307,14 +318,23 @@ class MutantExecutor:
         verdict = Verdict(Status.ERROR, "unsettled")
         selection = Selection()
         hint = self._hints.get(mutant.id)
+        narrowed = False
         for _ in range(_MAX_ROUNDS + 1):
             selection = self._selector.select(mutant, exclude)
             if selection.status is not None:
                 return MutantResult(mutant.id, selection.status, selection.reason)
             hinted = hint is not None and hint in selection.nodeids
+            probing = False
             if hinted and hint is not None:
                 # Cheap re-validation of a cached kill: its killing test alone.
                 selection = Selection(nodeids=(hint,))
+            elif selection.first and not narrowed:
+                # A whole-suite mutant: the tests that reach its lines usually
+                # settle it, without collecting the suite and with a budget
+                # sized for them. Anything they don't catch faces the suite.
+                selection = Selection(nodeids=selection.first)
+                probing = True
+            narrowed = narrowed or hinted or probing
             hint = None
             nodeids = selection.nodeids
             if not solo and self._is_serial(nodeids):
@@ -326,10 +346,14 @@ class MutantExecutor:
                     budget * self._timeout.retry_factor,
                     self._timeout.max_seconds * self._timeout.retry_factor,
                 )
-            outcome = self._attempt(mutant, nodeids, prune, worker, budget)
+            outcome = self._attempt(
+                mutant, nodeids, prune, worker, budget, selection.first
+            )
             attempts += 1
             verdict = classify(outcome.process, outcome.record, self._baseline.passing)
             if hinted and verdict.status is not Status.KILLED:
+                continue
+            if probing and verdict.status not in _PROBE_SETTLES:
                 continue
             if verdict.confirm == CONFIRM_RETRY and not retried:
                 retried = True
@@ -363,7 +387,7 @@ class MutantExecutor:
             elif (
                 verdict.status is Status.KILLED
                 and verdict.killing_test is not None
-                and (not selection.full or self._reordered)
+                and (not selection.full or self._reordered or selection.first)
                 and not self._passes_alone(verdict.killing_test, worker)
             ):
                 attempts += 2

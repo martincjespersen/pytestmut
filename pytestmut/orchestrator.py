@@ -73,6 +73,7 @@ class RunOptions:
         keep_jobs: Keep per-job directories for debugging.
         reached_only: Keep only mutants in code the selected tests execute,
             so a narrowed set of tests is judged on what it exercises.
+        time_limit: Seconds from the start after which no new mutant starts.
     """
 
     staged: bool = False
@@ -80,6 +81,7 @@ class RunOptions:
     only: tuple[str, ...] = ()
     keep_jobs: bool = False
     reached_only: bool = False
+    time_limit: float | None = None
 
 
 def _silent(message: str) -> None:
@@ -298,6 +300,9 @@ class Orchestrator:
                         tainted.extend(current.changed_since(before))
 
         deadline = scope.deadline(started)
+        if options.time_limit is not None:
+            limit = started + options.time_limit
+            deadline = limit if deadline is None else min(deadline, limit)
         executor = MutantExecutor(
             runner,
             baseline,
@@ -718,17 +723,24 @@ class Orchestrator:
             1 for result in results.values() if result.reason == BUDGET_EXHAUSTED
         )
         if out_of_time:
-            message = (
-                f"{out_of_time} mutant(s) were not run: the time budget of "
-                f"{config.diff.budget_seconds:g}s ran out"
-            )
-            if config.diff.on_budget_exceeded == "fail":
-                all_failures.append(message)
+            message = f"{out_of_time} mutant(s) were not run: the time "
+            if scope.budget_seconds is None:
+                # Only --time-limit set a deadline; the report says partial.
+                all_warnings.append(message + "limit ran out")
+            elif config.diff.on_budget_exceeded == "fail":
+                all_failures.append(
+                    message + f"budget of {scope.budget_seconds:g}s ran out"
+                )
             else:
-                all_warnings.append(message)
+                all_warnings.append(
+                    message + f"budget of {scope.budget_seconds:g}s ran out"
+                )
         if all_failures:
             exit_code = ToolFailure.exit_code
         elif any(not policy.passed for policy in policies):
+            exit_code = 1
+        elif out_of_time and scope.budget_seconds is None:
+            # Cut short by --time-limit: mutants that never ran cannot pass.
             exit_code = 1
         else:
             exit_code = 0
