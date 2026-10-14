@@ -1,0 +1,20 @@
+[loglicense]
+allowed =
+    MIT,
+    BSD-3-Clause,
+    BSD,
+    Apache,
+    Expat,
+    Python Software Foundation License,
+    MPL-2.0,
+    Python,
+    Apache Software,
+    ISC,
+banned =
+    AGPL,
+validated =
+    docutils,
+    restructuredtext-lint,
+    packaging,
+    filelock,
+coverage = 100

@@ -8,7 +8,7 @@ build:
     python: "3.13"
   jobs:
     pre_build:
-      # Refresh the mutation report that the "This project's mutation report"
+      # Refresh the mutation report that the "Mutation report"
       # page shows. A missed threshold (exit 1) still publishes the docs. If
       # the run outgrows 10 minutes, timeout stops it (pytestmut treats the
       # SIGTERM like Ctrl-C and cleans up) and the page says no report was
@@ -19,6 +19,12 @@ build:
         timeout --kill-after=60 600
         python -m pytestmut run --quiet --report text --report html --max-memory 3GiB
         || test $? -le 1 -o $? -eq 124 -o $? -eq 137
+      # Refresh the "Dependency licenses" page. A failed check (exit 1 or 2)
+      # still writes the table, so it is published; CI is the gate.
+      - mkdir -p build
+      - >-
+        python -m loglicense check --dependency-file uv.lock --output-file build/licenses.md
+        || test $? -le 2
 
 python:
   install:

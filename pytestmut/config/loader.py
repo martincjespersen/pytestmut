@@ -380,7 +380,8 @@ def with_overrides(
 def _read(path: Path) -> dict[str, Any]:
     try:
         with path.open("rb") as handle:
-            return tomllib.load(handle)
+            data: dict[str, Any] = tomllib.load(handle)
+            return data
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise ConfigError(f"cannot read {path}: {exc}") from exc
 

@@ -120,6 +120,8 @@ def _sample() -> dict[int, int] | None:
 
 
 def _linux_sample() -> dict[int, int] | None:
+    if sys.platform == "win32":
+        return None
     page = os.sysconf("SC_PAGE_SIZE")
     totals: dict[int, int] = {}
     try:

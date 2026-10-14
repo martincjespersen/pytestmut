@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="pytestmut">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E1B4B"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="strandA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="strandB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="62" height="62" rx="14" fill="url(#bg)"/>
+  <g>
+    <path d="M39.96,20.60 L39.85,21.20 L39.67,21.80 L39.41,22.40 L39.09,23.00 L38.69,23.60 L38.23,24.20 L37.71,24.80 L37.12,25.40 L36.49,26.00 L35.79,26.60 L35.05,27.20 L34.27,27.80 L33.45,28.40 L32.59,29.00 L31.71,29.60 L30.80,30.20 L29.88,30.80 L28.94,31.40 L28.00,32.00 L27.06,32.60 L26.12,33.20 L25.20,33.80 L24.29,34.40 L23.41,35.00 L22.55,35.60 L21.73,36.20 L20.95,36.80 L20.21,37.40 L19.51,38.00 L18.88,38.60 L18.29,39.20 L17.77,39.80 L17.31,40.40 L16.91,41.00 L16.59,41.60 L16.33,42.20 L16.15,42.80 L16.04,43.40 L16.00,44.00" stroke="url(#strandA)" stroke-opacity=".35" stroke-width="5.2" fill="none" stroke-linecap="round"/>
+    <path d="M28.00,8.00 L27.06,8.60 L26.12,9.20 L25.20,9.80 L24.29,10.40 L23.41,11.00 L22.55,11.60 L21.73,12.20 L20.95,12.80 L20.21,13.40 L19.51,14.00 L18.88,14.60 L18.29,15.20 L17.77,15.80 L17.31,16.40 L16.91,17.00 L16.59,17.60 L16.33,18.20 L16.15,18.80 L16.04,19.40 L16.00,20.00 M39.96,44.60 L39.85,45.20 L39.67,45.80 L39.41,46.40 L39.09,47.00 L38.69,47.60 L38.23,48.20 L37.71,48.80 L37.12,49.40 L36.49,50.00 L35.79,50.60 L35.05,51.20 L34.27,51.80 L33.45,52.40 L32.59,53.00 L31.71,53.60 L30.80,54.20 L29.88,54.80 L28.94,55.40 L28.00,56.00" stroke="url(#strandB)" stroke-opacity=".35" stroke-width="5.2" fill="none" stroke-linecap="round"/>
+    <line x1="20.95" y1="12.80" x2="35.05" y2="12.80" stroke="#CBD5E1" stroke-opacity=".55" stroke-width="2.86" stroke-linecap="round"/>
+    <line x1="16.59" y1="22.40" x2="39.41" y2="22.40" stroke="#CBD5E1" stroke-opacity=".55" stroke-width="2.86" stroke-linecap="round"/>
+    <line x1="16.59" y1="41.60" x2="39.41" y2="41.60" stroke="#CBD5E1" stroke-opacity=".55" stroke-width="2.86" stroke-linecap="round"/>
+    <line x1="20.95" y1="51.20" x2="35.05" y2="51.20" stroke="#CBD5E1" stroke-opacity=".55" stroke-width="2.86" stroke-linecap="round"/>
+    <path d="M28.00,8.00 L28.94,8.60 L29.88,9.20 L30.80,9.80 L31.71,10.40 L32.59,11.00 L33.45,11.60 L34.27,12.20 L35.05,12.80 L35.79,13.40 L36.49,14.00 L37.12,14.60 L37.71,15.20 L38.23,15.80 L38.69,16.40 L39.09,17.00 L39.41,17.60 L39.67,18.20 L39.85,18.80 L39.96,19.40 L40.00,20.00 M16.04,44.60 L16.15,45.20 L16.33,45.80 L16.59,46.40 L16.91,47.00 L17.31,47.60 L17.77,48.20 L18.29,48.80 L18.88,49.40 L19.51,50.00 L20.21,50.60 L20.95,51.20 L21.73,51.80 L22.55,52.40 L23.41,53.00 L24.29,53.60 L25.20,54.20 L26.12,54.80 L27.06,55.40 L28.00,56.00" stroke="url(#strandA)" stroke-width="5.2" fill="none" stroke-linecap="round"/>
+    <path d="M16.04,20.60 L16.15,21.20 L16.33,21.80 L16.59,22.40 L16.91,23.00 L17.31,23.60 L17.77,24.20 L18.29,24.80 L18.88,25.40 L19.51,26.00 L20.21,26.60 L20.95,27.20 L21.73,27.80 L22.55,28.40 L23.41,29.00 L24.29,29.60 L25.20,30.20 L26.12,30.80 L27.06,31.40 L28.00,32.00 L28.94,32.60 L29.88,33.20 L30.80,33.80 L31.71,34.40 L32.59,35.00 L33.45,35.60 L34.27,36.20 L35.05,36.80 L35.79,37.40 L36.49,38.00 L37.12,38.60 L37.71,39.20 L38.23,39.80 L38.69,40.40 L39.09,41.00 L39.41,41.60 L39.67,42.20 L39.85,42.80 L39.96,43.40 L40.00,44.00" stroke="url(#strandB)" stroke-width="5.2" fill="none" stroke-linecap="round"/>
+  </g>
+  <circle cx="49" cy="49" r="11" fill="#14B8A6" stroke="#0F172A" stroke-width="3"/>
+  <path d="M44 49.2 L47.6 52.8 L54 46" fill="none" stroke="#0F172A" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

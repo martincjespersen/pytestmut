@@ -1,0 +1,51 @@
+name: Hard gate
+
+# Every check a pull request into main must pass: the default nox sessions
+# (format, imports, licenses, lint, types, all tests), pytestmut's mutation
+# testing of its own core modules, and a strict docs build. The CI workflow
+# covers the other operating systems and Python versions.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: hard-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  hard-gate:
+    name: hard-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.13"
+      - run: uv sync
+      # Build Docs runs pytestmut again for the report; it reuses the verdicts
+      # Mutation Tests cached, so the second run is short.
+      - run: >-
+          uv run nox
+          -s "Check Code Format"
+          "Import Checking"
+          "License Checking"
+          "Lint Checking"
+          "Type Checking"
+          "Unit Tests"
+          "Mutation Tests"
+          "Build Docs"
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hard-gate-reports
+          path: |
+            .pytestmut/reports/
+            htmlcov/
+            build/licenses.md
+            site/
+          if-no-files-found: ignore

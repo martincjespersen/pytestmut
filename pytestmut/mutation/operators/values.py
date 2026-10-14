@@ -100,9 +100,11 @@ def lambda_sites(ctx: ModuleContext, node: ast.Lambda) -> Iterator[Site]:
 
 
 def fstring_sites(ctx: ModuleContext, node: ast.FormattedValue) -> Iterator[Site]:
-    """Blank the expression of an f-string field."""
-    if sys.version_info >= (3, 12):
-        yield node_site(ctx, "fstring.expr", node.value, "''")
+    """Blank the expression of an f-string field (Python 3.12+ only)."""
+    if sys.version_info < (3, 12):
+        # Earlier tokenizers give no positions inside f-strings.
+        return
+    yield node_site(ctx, "fstring.expr", node.value, "''")
 
 
 def _enclosing_function(

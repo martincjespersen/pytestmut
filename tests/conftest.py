@@ -33,7 +33,7 @@ def make_project(tmp_path: Path) -> ProjectFactory:
         for name, content in files.items():
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(textwrap.dedent(content), encoding="utf-8")
+            path.write_text(textwrap.dedent(content), encoding="utf-8", newline="\n")
         return root.resolve()
 
     return build
@@ -151,7 +151,7 @@ def generate(
 ) -> FileMutants:
     """Generate the mutants of one module written to a temp directory."""
     path = tmp_path / "module.py"
-    path.write_text(textwrap.dedent(source), encoding="utf-8")
+    path.write_text(textwrap.dedent(source), encoding="utf-8", newline="\n")
     config: Config = parse_config(
         dict(settings or {"operators": {"level": "all"}}), tmp_path, None, "test"
     )

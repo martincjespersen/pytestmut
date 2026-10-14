@@ -14,7 +14,9 @@ from pytestmut.policy.evaluate import overall_scores
 from pytestmut.report.model import RunResult
 from pytestmut.report.source import SourceCache
 
-_TEMPLATE = Path(__file__).resolve().parent / "assets" / "template.html"
+_ASSETS = Path(__file__).resolve().parent / "assets"
+_TEMPLATE = _ASSETS / "template.html"
+_LOGO = _ASSETS / "logo.svg"
 _PLACEHOLDER = "__DATA__"
 _DETAIL_LIMIT = 400
 
@@ -115,4 +117,11 @@ def render_html(result: RunResult, embed_source: bool = True) -> str:
     # Keep the embedded JSON from closing its own script element.
     data = data.replace("</", "<\\/")
     template = _TEMPLATE.read_text(encoding="utf-8")
-    return template.replace(_PLACEHOLDER, data)
+    logo = (
+        _LOGO.read_text(encoding="utf-8").replace('role="img"', 'aria-hidden="true"')
+        # Inline SVG in HTML needs no namespace, and the report holds no URLs.
+        .replace(' xmlns="http://www.w3.org/2000/svg"', "")
+    )
+    # The logo goes in first, so nothing in the run data can be mistaken for
+    # the placeholder.
+    return template.replace("__LOGO__", logo, 1).replace(_PLACEHOLDER, data, 1)
