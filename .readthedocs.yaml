@@ -8,16 +8,19 @@ build:
     python: "3.13"
   jobs:
     pre_build:
-      # Refresh the mutation report that the "Mutation report"
-      # page shows. A missed threshold (exit 1) still publishes the docs. If
-      # the run outgrows 10 minutes, timeout stops it (pytestmut treats the
-      # SIGTERM like Ctrl-C and cleans up) and the page says no report was
-      # generated, rather than failing the build. Any other failure (broken
-      # tests, bad config) stops the build.
-      # Builds get 15 minutes and 7 GB of memory on the free plan.
+      # Refresh the mutation report that the "Mutation report" page shows.
+      # Builds get 15 minutes and 7 GB of memory on the free plan, with few
+      # CPUs, so the run is time-boxed:
+      # - --time-limit 420: no new mutant starts after 7 minutes; the rest are
+      #   reported as not run, the report is marked partial, and the run
+      #   exits 1, which still publishes the docs (as a missed threshold does).
+      # - timeout 600 is the backstop: pytestmut treats its SIGTERM like
+      #   Ctrl-C and cleans up, and the page then says no report was made.
+      # Any other failure (broken tests, bad config) stops the build.
       - >-
         timeout --kill-after=60 600
-        python -m pytestmut run --quiet --report text --report html --max-memory 3GiB
+        python -m pytestmut run --report text --report html
+        --max-memory 3GiB --time-limit 420
         || test $? -le 1 -o $? -eq 124 -o $? -eq 137
       # Refresh the "Dependency licenses" page. A failed check (exit 1 or 2)
       # still writes the table, so it is published; CI is the gate.

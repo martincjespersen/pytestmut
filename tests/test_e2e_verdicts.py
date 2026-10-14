@@ -376,6 +376,45 @@ def test_mutants_in_memoised_functions_face_every_test(
     )
 
 
+def test_whole_suite_mutants_run_the_reaching_tests_first(
+    make_project: ProjectFactory,
+) -> None:
+    unrelated = "\n\n".join(f"def test_unrelated_{i}():\n    pass" for i in range(20))
+    root = make_project(
+        {
+            "pyproject.toml": '[tool.pytestmut]\npaths = ["calc.py"]\n',
+            "calc.py": """\
+                import functools
+
+
+                @functools.lru_cache(maxsize=None)
+                def bump(n):
+                    return n + 1
+            """,
+            # Collected first, so in baseline order they would all run before
+            # the one test that reaches the mutant.
+            "tests/test_a_unrelated.py": unrelated + "\n",
+            "tests/test_z_calc.py": """\
+                from calc import bump
+
+
+                def test_bump():
+                    assert bump(1) == 2
+            """,
+        }
+    )
+    run = run_tool(root, "run", "--no-cache")
+    assert run.exit_code == 0, run.stderr
+    assert run.status(6, "arith.add_sub") == "killed"
+    killed = [
+        result
+        for result in run.result.results.values()
+        if result.status.value == "killed"
+    ]
+    assert killed and all(r.killing_test.endswith("test_bump") for r in killed)
+    assert all(r.tests_run == 1 for r in killed)
+
+
 def test_selection_misses_are_caught_and_corrected(
     make_project: ProjectFactory,
 ) -> None:

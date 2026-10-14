@@ -230,6 +230,10 @@ def render_text(result: RunResult, show_suppressed: bool = False) -> str:
 def _verdict_line(result: RunResult) -> str:
     if result.exit_code == 0:
         return "PASSED: every policy met its thresholds"
+    if result.exit_code == 1 and all(policy.passed for policy in result.policies):
+        return (
+            "FAILED: the run hit its time limit; mutants that did not run cannot pass"
+        )
     if result.exit_code == 1:
         return "FAILED: at least one policy missed its thresholds"
     return f"FAILED (exit code {result.exit_code})"

@@ -153,6 +153,14 @@ def run(
         Optional[str],
         typer.Option(help="Total memory for all test processes, e.g. 4GiB."),
     ] = None,
+    time_limit: Annotated[
+        Optional[float],
+        typer.Option(
+            min=1.0,
+            help="Seconds after which no new mutant starts; the rest are "
+            "reported as not run and the report is marked partial.",
+        ),
+    ] = None,
     no_cache: Annotated[
         bool, typer.Option("--no-cache", help="Ignore and do not write the cache.")
     ] = False,
@@ -188,6 +196,8 @@ def run(
             tests; they also replace the configured arguments.
         max_memory: Memory all test processes together may use; the worker
             count is reduced to fit. Defaults to half of physical memory.
+        time_limit: Seconds from the start after which no new mutant starts,
+            so a run on a time-limited builder still ends with a report.
         no_cache: Run every mutant, reusing nothing.
         keep_jobs: Keep per-job directories under the state directory.
         show_suppressed: List suppressed candidates in the text report.
@@ -223,6 +233,7 @@ def run(
         only=tuple(only or ()),
         keep_jobs=keep_jobs,
         reached_only=bool(tests),
+        time_limit=time_limit,
     )
     code = run_and_report(cfg, options, quiet=quiet, show_suppressed=show_suppressed)
     raise typer.Exit(code=code)

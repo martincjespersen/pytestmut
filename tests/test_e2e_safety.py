@@ -396,3 +396,22 @@ def test_random_order_from_addopts_is_neutralised(make_project: ProjectFactory) 
     assert run.exit_code == 0, run.stderr
     assert run.status(2, "arith.add_sub") == "killed"
     assert "error" not in run.statuses()
+
+
+def test_time_limit_ends_the_run_with_a_partial_report(
+    make_project: ProjectFactory,
+) -> None:
+    root = make_project(
+        {"pyproject.toml": CONFIG, "calc.py": CALC, "tests/test_calc.py": CALC_TESTS}
+    )
+    # The baseline alone takes longer than a second, so no mutant may start.
+    run = run_tool(
+        root, "run", "--no-cache", "--time-limit", "1", "-r", "text", "-r", "html"
+    )
+    assert run.result.partial
+    assert set(run.statuses()) == {"not_run"}
+    assert any("the time limit ran out" in w for w in run.result.warnings)
+    assert (root / ".pytestmut" / "reports" / "report.html").is_file()
+    # Mutants that never ran must not let the run pass.
+    assert run.exit_code == 1
+    assert "hit its time limit" in run.stderr + run.stdout

@@ -29,12 +29,16 @@ class Selection:
         status: Status to assign without running, if any.
         reason: Why that status, or why the full suite was chosen.
         full: True when the selection is the whole baseline.
+        first: For a whole-suite selection, the tests known to execute the
+            mutated lines, to run before the rest: they are the likeliest to
+            kill, so the run can stop early.
     """
 
     nodeids: tuple[str, ...] = ()
     status: Status | None = None
     reason: str = ""
     full: bool = False
+    first: tuple[str, ...] = ()
 
 
 @dataclass
@@ -204,22 +208,28 @@ class Selector:
             return self._full(everything, "selection = all")
         index = self._index[mutant.path]
         first, last = mutant.cover_lines
+        wanted = self._map.tests_for(index, first, last)
+        reaching = tuple(n for n in everything if n in wanted)
         if mutant.static:
-            return self._full(everything, "runs at import time")
+            return self._full(everything, "runs at import time", reaching)
         if mutant.memoised:
             # A test reading a cached result never ran these lines but still
             # depends on them, so the line map cannot be trusted here.
-            return self._full(everything, "inside a memoised function")
+            return self._full(everything, "inside a memoised function", reaching)
         if self._map.is_static(index, first, last):
-            return self._full(everything, "line also runs outside any test")
-        wanted = self._map.tests_for(index, first, last)
+            return self._full(everything, "line also runs outside any test", reaching)
         wanted |= self._map.always | self._map.by_file.get(index, set())
         chosen = tuple(n for n in everything if n in wanted)
         if not chosen:
             return Selection(status=Status.NO_COVERAGE, reason="no test reaches it")
         return Selection(nodeids=chosen, full=len(chosen) == len(self._all))
 
-    def _full(self, everything: tuple[str, ...], reason: str) -> Selection:
+    def _full(
+        self,
+        everything: tuple[str, ...],
+        reason: str,
+        reaching: tuple[str, ...] = (),
+    ) -> Selection:
         if not everything:
             return Selection(status=Status.NO_COVERAGE, reason="no usable tests")
-        return Selection(nodeids=everything, reason=reason, full=True)
+        return Selection(nodeids=everything, reason=reason, full=True, first=reaching)

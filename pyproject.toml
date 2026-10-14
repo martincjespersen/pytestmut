@@ -56,8 +56,13 @@ paths = [
 args = ["-m", "not e2e"]
 
 [tool.pytestmut.timeout]
-# The unit tests selected for one mutant finish in about a second.
-floor_seconds = 6
+# The unit tests selected for one mutant finish in about a second, and the
+# mutants that time out loop forever, so short budgets lose nothing. Budgets
+# still scale with the time measured on the machine (3x plus grace), and
+# every timeout is retried alone and checked against an unmutated run.
+floor_seconds = 3
+grace_seconds = 2
+retry_factor = 1.5
 
 [tool.pytestmut.thresholds]
 # Every mutant is currently killed; keep it that way.
