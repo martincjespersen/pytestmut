@@ -36,7 +36,9 @@ the total budget:
 pytestmut: memory: 184 MiB per run measured, budget 9.0 GiB, limit 512 MiB per worker, 12 worker(s)
 ```
 
-- **The total budget** defaults to half of physical memory.
+- **The total budget** defaults to half of the memory available: physical
+  memory, or the container's limit when that is smaller (Docker, Kubernetes,
+  hosted CI and docs builders).
 - **The per-worker limit** defaults to 2.5 times what one run of your suite
   needed, and at least 512 MiB.
 - **The worker count is reduced** until workers × limit fits the budget. If

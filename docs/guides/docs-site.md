@@ -117,3 +117,68 @@ def serve_docs(session):
 ```
 
 While `mkdocs serve` runs, writing a new report reloads the page.
+
+## Publishing on Read the Docs
+
+Read the Docs builds the site from your repository on every push, using a
+`.readthedocs.yaml` at the repository root. No CI workflow is needed.
+
+```yaml title=".readthedocs.yaml"
+version: 2
+
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.13"
+  jobs:
+    pre_build:
+      - >-
+        timeout --kill-after=60 600
+        python -m pytestmut run --quiet --report text --report html --max-memory 3GiB
+        || test $? -le 1 -o $? -eq 124 -o $? -eq 137
+
+python:
+  install:
+    - method: uv
+      command: sync
+      groups:
+        - dev               # the group holding pytest, MkDocs and your test dependencies
+
+mkdocs:
+  configuration: mkdocs.yml
+  fail_on_warning: true
+```
+
+What the `pre_build` step does:
+
+- **Refreshes the report** before MkDocs runs, so the hook above picks it up.
+- **Publishes even when thresholds are missed:** exit code 1 still lets the
+  build continue.
+- **Stays inside the build time limit.** Free builds get 15 minutes and 7 GB
+  of memory. `timeout` stops a run that takes longer than 10 minutes,
+  pytestmut cleans up, and the page explains that no report was generated.
+- **Stops the build on real problems:** broken tests or bad configuration
+  (exit codes 2 to 5).
+- **Stays within memory:** `--max-memory 3GiB` leaves room for the rest of the
+  build.
+
+Add the canonical URL to `mkdocs.yml`, so links and search engines point at
+Read the Docs:
+
+```yaml title="mkdocs.yml"
+site_url: !ENV READTHEDOCS_CANONICAL_URL
+```
+
+Then, once:
+
+1. **Push the repository** to GitHub, GitLab or Bitbucket.
+2. **Sign in** at [readthedocs.org](https://readthedocs.org) with that account.
+3. **Import the repository.** Read the Docs adds the webhook itself and starts
+   the first build.
+4. *(Optional)* **Build previews of pull requests:** in the project's
+   settings, enable building pull requests.
+
+!!! tip "Large test suites"
+    If the mutation run regularly hits the 10-minute cap, narrow what the docs
+    build tests: point `paths` at your critical modules, or run the full
+    report in CI and keep the docs build to a smaller scope.

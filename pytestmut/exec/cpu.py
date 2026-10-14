@@ -63,7 +63,41 @@ def effective_cpus() -> int:
     return max(1, int(min(counts)))
 
 
+def _cgroup_memory_limit(root: Path = Path("/sys/fs/cgroup")) -> int | None:
+    """Memory limit of the current container, in bytes.
+
+    Inside a container the machine reports the host's memory, which can be
+    many times what the container may use.
+
+    Arguments:
+        root: Where the cgroup filesystem is mounted.
+
+    Returns:
+        The limit, or None when there is none or no cgroup filesystem.
+    """
+    for name in ("memory.max", "memory/memory.limit_in_bytes"):
+        try:
+            text = (root / name).read_text(encoding="ascii").strip()
+        except OSError:
+            continue
+        # cgroup v1 reports "no limit" as a number close to the maximum.
+        if text.isdigit() and 0 < int(text) < 1 << 60:
+            return int(text)
+    return None
+
+
 def total_memory() -> int | None:
+    """Memory this process may use in bytes, or None when it is unknown.
+
+    The smaller of the physical memory and the container's limit.
+    """
+    physical = _physical_memory()
+    limit = _cgroup_memory_limit() if sys.platform.startswith("linux") else None
+    known = [value for value in (physical, limit) if value is not None]
+    return min(known) if known else None
+
+
+def _physical_memory() -> int | None:
     """Physical memory in bytes, or None when it cannot be determined."""
     if sys.platform == "win32":
         import ctypes

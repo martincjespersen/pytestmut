@@ -1,0 +1,32 @@
+# Read the Docs build configuration.
+# Reference: https://docs.readthedocs.com/platform/stable/config-file/v2.html
+version: 2
+
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.13"
+  jobs:
+    pre_build:
+      # Refresh the mutation report that the "This project's mutation report"
+      # page shows. A missed threshold (exit 1) still publishes the docs. If
+      # the run outgrows 10 minutes, timeout stops it (pytestmut treats the
+      # SIGTERM like Ctrl-C and cleans up) and the page says no report was
+      # generated, rather than failing the build. Any other failure (broken
+      # tests, bad config) stops the build.
+      # Builds get 15 minutes and 7 GB of memory on the free plan.
+      - >-
+        timeout --kill-after=60 600
+        python -m pytestmut run --quiet --report text --report html --max-memory 3GiB
+        || test $? -le 1 -o $? -eq 124 -o $? -eq 137
+
+python:
+  install:
+    - method: uv
+      command: sync
+      groups:
+        - dev
+
+mkdocs:
+  configuration: mkdocs.yml
+  fail_on_warning: true

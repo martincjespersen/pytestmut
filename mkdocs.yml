@@ -1,5 +1,7 @@
 site_name: pytestmut
 site_description: Mutation testing for pytest
+# Read the Docs sets this; local builds leave it empty.
+site_url: !ENV READTHEDOCS_CANONICAL_URL
 theme:
   name: material
   features:

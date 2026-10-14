@@ -507,6 +507,36 @@ def test_kernel_reports_the_peak_of_finished_children(tmp_path: Path) -> None:
         assert peak is not None and peak > 60 * 1024 * 1024
 
 
+def test_container_memory_limits_are_read(tmp_path: Path) -> None:
+    from pytestmut.exec.cpu import _cgroup_memory_limit
+
+    assert _cgroup_memory_limit(tmp_path) is None
+    (tmp_path / "memory.max").write_text("max\n")
+    assert _cgroup_memory_limit(tmp_path) is None
+    (tmp_path / "memory.max").write_text("7516192768\n")
+    assert _cgroup_memory_limit(tmp_path) == 7 * GIB
+    (tmp_path / "memory.max").unlink()
+    (tmp_path / "memory").mkdir()
+    (tmp_path / "memory" / "memory.limit_in_bytes").write_text("9223372036854771712\n")
+    assert _cgroup_memory_limit(tmp_path) is None
+    (tmp_path / "memory" / "memory.limit_in_bytes").write_text("2147483648\n")
+    assert _cgroup_memory_limit(tmp_path) == 2 * GIB
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+def test_sigterm_interrupts_a_run_like_ctrl_c() -> None:
+    import signal
+
+    from pytestmut.session import _terminate_as_interrupt
+
+    before = signal.getsignal(signal.SIGTERM)
+    with pytest.raises(KeyboardInterrupt):
+        with _terminate_as_interrupt():
+            os.kill(os.getpid(), signal.SIGTERM)
+            time.sleep(5)
+    assert signal.getsignal(signal.SIGTERM) is before
+
+
 def test_format_size() -> None:
     assert format_size(None) == "unlimited"
     assert format_size(512 * MIB) == "512 MiB"

@@ -6,10 +6,13 @@ both write the same files, print the same report and exit the same way.
 
 from __future__ import annotations
 
+import contextlib
+import signal
 import sys
+import threading
 import time
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 from pytestmut.config.model import Config
 from pytestmut.exceptions import PytestmutError
@@ -84,6 +87,29 @@ class Console:
             self._open_line = False
 
 
+@contextlib.contextmanager
+def _terminate_as_interrupt() -> Iterator[None]:
+    """Treat SIGTERM like Ctrl-C while a run is in progress.
+
+    CI systems cancel jobs, and ``timeout`` ends commands, with SIGTERM.
+    Python's default for it is to die on the spot, leaving test processes to
+    their own watchdogs; as an interrupt, the run instead stops its workers,
+    removes its scratch space and exits with code 130.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def interrupt(signum: int, frame: object) -> None:
+        raise KeyboardInterrupt
+
+    previous = signal.signal(signal.SIGTERM, interrupt)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
 def run_and_report(
     config: Config,
     options: RunOptions = RunOptions(),
@@ -110,7 +136,8 @@ def run_and_report(
         config, notify=console.notify, progress=console.progress
     )
     try:
-        result = orchestrator.run(options)
+        with _terminate_as_interrupt():
+            result = orchestrator.run(options)
     except PytestmutError as exc:
         console.close()
         err(f"pytestmut: error: {exc}")
