@@ -15,6 +15,7 @@ import pytest
 from pytestmut._meta import SENTINEL_NAME
 from pytestmut.config.model import PytestConfig, SafetyConfig
 from pytestmut.exceptions import StateDirError
+from pytestmut.exec import supervisor
 from pytestmut.exec.cpu import (
     GIB,
     MIB,
@@ -163,6 +164,27 @@ def test_memory_growth_is_stopped(tmp_path: Path) -> None:
     assert outcome.peak_rss is not None and outcome.peak_rss > limit
     # Stopped for memory long before the time budget would have ended it.
     assert time.monotonic() - started < 30
+
+
+def test_peak_recorded_by_the_platform_counts_after_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Windows job limits fail allocations instead of killing, often before the
+    # next poll; the job's recorded peak is what shows the limit was crossed.
+    limit = 64 * 1024 * 1024
+    real_spawn = supervisor._spawn
+
+    def spawn(spec: ProcessSpec) -> object:
+        handle = real_spawn(spec)
+        monkeypatch.setattr(handle, "peak_after_exit", lambda: limit + 1)
+        return handle
+
+    monkeypatch.setattr(supervisor, "_spawn", spawn)
+    quick = _spec("pass", tmp_path, memory_limit=limit)
+    outcome = LocalSupervisor().run(quick, threading.Event())
+    assert outcome.oom and outcome.peak_rss == limit + 1
+    unlimited = LocalSupervisor().run(_spec("pass", tmp_path), threading.Event())
+    assert not unlimited.oom
 
 
 def test_cancel_stops_a_running_process(tmp_path: Path) -> None:

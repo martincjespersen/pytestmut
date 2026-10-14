@@ -62,9 +62,14 @@ class WindowsHandle:
             return None
         return _peak_job_memory(self.job)
 
-    def memory_killed(self) -> bool:
-        """The job limit makes allocations fail; it does not kill."""
-        return False
+    def peak_after_exit(self) -> int | None:
+        """Peak committed memory of the job, read before it is closed.
+
+        The job limit makes allocations fail with ``MemoryError`` instead of
+        killing, often before the supervisor's next poll; the peak still
+        shows how far the tree got.
+        """
+        return self.tree_rss()
 
     def close(self) -> None:
         """Close the job, which kills anything still inside it."""
