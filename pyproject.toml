@@ -1,15 +1,40 @@
 [project]
 name = "pytestmut"
-version = "0.1.0"
+# The version lives in pytestmut/_meta.py; the release workflow publishes
+# every new version that reaches main.
+dynamic = ["version"]
 description = "Mutation testing for pytest: correct verdicts on every OS, parallel runs, and per-path policies for critical code"
 authors = [{ name = "Martin Jespersen", email = "martincjespersen@gmail.com" }]
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
+keywords = ["mutation testing", "pytest", "test quality", "pre-commit", "ci"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
 dependencies = [
     "pytest>=8.0",
     "typer>=0.12",
     "tomli>=2.0; python_version < '3.11'",
 ]
+
+[project.urls]
+Homepage = "https://github.com/martincjespersen/pytestmut"
+Documentation = "https://pytestmut.readthedocs.io"
+Source = "https://github.com/martincjespersen/pytestmut"
+Issues = "https://github.com/martincjespersen/pytestmut/issues"
 
 [project.scripts]
 pytestmut = "pytestmut.cli:app"
@@ -94,6 +119,9 @@ strict = true
 # sitecustomize.py must stay importable by any interpreter that inherits
 # PYTHONPATH, so it carries no annotations.
 exclude = ['pytestmut/_shim/sitecustomize\.py$']
+
+[tool.hatch.version]
+path = "pytestmut/_meta.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["pytestmut"]

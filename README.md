@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-wordmark-dark.svg">
-  <img alt="pytestmut" src="docs/assets/logo-wordmark-light.svg" width="440">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/martincjespersen/pytestmut/main/docs/assets/logo-wordmark-dark.svg">
+  <img alt="pytestmut" src="https://raw.githubusercontent.com/martincjespersen/pytestmut/main/docs/assets/logo-wordmark-light.svg" width="440">
 </picture>
 
 ### Find the bugs your tests would miss.
@@ -13,13 +13,14 @@
 ![pytest](https://img.shields.io/badge/pytest-8%2B-14B8A6)
 ![Self-test mutation score](https://img.shields.io/badge/self--test%20mutation%20score-100%25-14B8A6)
 ![Types](https://img.shields.io/badge/types-mypy%20strict-334155)
+[![License: MIT](https://img.shields.io/badge/license-MIT-334155)](https://github.com/martincjespersen/pytestmut/blob/main/LICENSE)
 ![Code style](https://img.shields.io/badge/code%20style-black-000000)
 
 [**Documentation**](https://pytestmut.readthedocs.io) ·
-[Getting started](docs/getting-started.md) ·
-[Coding agents](docs/guides/agents.md) ·
-[CI/CD](docs/guides/ci.md) ·
-[Configuration](docs/reference/configuration.md)
+[Getting started](https://pytestmut.readthedocs.io/en/latest/getting-started/) ·
+[Coding agents](https://pytestmut.readthedocs.io/en/latest/guides/agents/) ·
+[CI/CD](https://pytestmut.readthedocs.io/en/latest/guides/ci/) ·
+[Configuration](https://pytestmut.readthedocs.io/en/latest/reference/configuration/)
 
 </div>
 
@@ -67,7 +68,7 @@ Survivors (5)
 ## Quick start
 
 ```bash
-uv add --dev /path/to/pytestmut    # not on PyPI yet: install from a checkout
+uv add --dev pytestmut             # or: pip install pytestmut
 pytestmut init --write             # add a starter [tool.pytestmut] to pyproject.toml
 pytestmut run                      # mutate, test, report
 pytestmut show 7bf19b97            # one mutant, and what test would catch it
@@ -82,29 +83,29 @@ paths = ["src/mypackage"]
 min_score = 80.0
 ```
 
-The [getting started guide](docs/getting-started.md) takes an example project
+The [getting started guide](https://pytestmut.readthedocs.io/en/latest/getting-started/) takes an example project
 from its first run to every mutant caught.
 
 ## What you can do with it
 
 | Goal | How | Guide |
 |---|---|---|
-| Find weak tests in a project | `pytestmut run` | [Getting started](docs/getting-started.md) |
-| Test only what you changed | `pytestmut run --diff main` or `--staged` | [Choosing what to test](docs/guides/scoping.md) |
-| Judge specific tests | `pytestmut run --tests tests/test_billing.py` | [Choosing what to test](docs/guides/scoping.md) |
-| Demand more from critical code | `[[tool.pytestmut.policy]]` with its own thresholds | [Strict rules for critical code](docs/guides/policies.md) |
-| Block weak commits | a pre-commit hook running `pytestmut run --hook` | [Pre-commit](docs/guides/pre-commit.md) |
-| Fail a pipeline below a threshold | `pytestmut run` in CI; the exit code is the gate | [CI/CD](docs/guides/ci.md) |
-| Let a coding agent check its own tests | `--tests`, actionable guidance and JSON output | [Coding agents](docs/guides/agents.md) |
-| Publish the report with your docs | the HTML report as a docs page | [Reports in your docs site](docs/guides/docs-site.md) |
-| Skip noise | built-in rules, `# pytestmut: skip -- why`, config | [Leaving code alone](docs/guides/suppressing.md) |
-| Keep runs fast and light | test selection, cache, workers, memory budget | [Speed and memory](docs/guides/performance.md) |
+| Find weak tests in a project | `pytestmut run` | [Getting started](https://pytestmut.readthedocs.io/en/latest/getting-started/) |
+| Test only what you changed | `pytestmut run --diff main` or `--staged` | [Choosing what to test](https://pytestmut.readthedocs.io/en/latest/guides/scoping/) |
+| Judge specific tests | `pytestmut run --tests tests/test_billing.py` | [Choosing what to test](https://pytestmut.readthedocs.io/en/latest/guides/scoping/) |
+| Demand more from critical code | `[[tool.pytestmut.policy]]` with its own thresholds | [Strict rules for critical code](https://pytestmut.readthedocs.io/en/latest/guides/policies/) |
+| Block weak commits | a pre-commit hook running `pytestmut run --hook` | [Pre-commit](https://pytestmut.readthedocs.io/en/latest/guides/pre-commit/) |
+| Fail a pipeline below a threshold | `pytestmut run` in CI; the exit code is the gate | [CI/CD](https://pytestmut.readthedocs.io/en/latest/guides/ci/) |
+| Let a coding agent check its own tests | `--tests`, actionable guidance and JSON output | [Coding agents](https://pytestmut.readthedocs.io/en/latest/guides/agents/) |
+| Publish the report with your docs | the HTML report as a docs page | [Reports in your docs site](https://pytestmut.readthedocs.io/en/latest/guides/docs-site/) |
+| Skip noise | built-in rules, `# pytestmut: skip -- why`, config | [Leaving code alone](https://pytestmut.readthedocs.io/en/latest/guides/suppressing/) |
+| Keep runs fast and light | test selection, cache, workers, memory budget | [Speed and memory](https://pytestmut.readthedocs.io/en/latest/guides/performance/) |
 
-**Reference:** [command line](docs/reference/cli.md) ·
-[configuration](docs/reference/configuration.md) ·
-[mutation operators](docs/reference/operators.md) ·
-[how it works](docs/how-it-works.md) ·
-[troubleshooting](docs/guides/troubleshooting.md)
+**Reference:** [command line](https://pytestmut.readthedocs.io/en/latest/reference/cli/) ·
+[configuration](https://pytestmut.readthedocs.io/en/latest/reference/configuration/) ·
+[mutation operators](https://pytestmut.readthedocs.io/en/latest/reference/operators/) ·
+[how it works](https://pytestmut.readthedocs.io/en/latest/how-it-works/) ·
+[troubleshooting](https://pytestmut.readthedocs.io/en/latest/guides/troubleshooting/)
 
 ## Why the numbers can be trusted
 
@@ -122,9 +123,8 @@ from its first run to every mutant caught.
 
 ## Status
 
-Version **0.1.0**, not yet on PyPI. Requires Python 3.10+ and pytest 8+.
-Tested on macOS with Python 3.10 to 3.13. Linux and Windows run in CI; Windows
-process containment is new and has not been run there yet.
+Alpha. Requires Python 3.10+ and pytest 8+. CI runs the full test suite on
+Linux, macOS and Windows with Python 3.10 to 3.14.
 
 ## Development
 
@@ -134,3 +134,12 @@ uv run nox                        # format, imports, licenses, lint, types, test
 uv run nox -s "Mutation Tests"    # pytestmut on its own core modules
 uv run nox -s "Serve Docs"        # the docs, with fresh mutation and license reports
 ```
+
+**Releasing:** bump `__version__` in `pytestmut/_meta.py` and merge to `main`.
+Once CI passes, the release workflow builds and checks the package, publishes
+it to PyPI, and tags a GitHub release. Pushes that keep the version publish
+nothing.
+
+## License
+
+[MIT](https://github.com/martincjespersen/pytestmut/blob/main/LICENSE)
