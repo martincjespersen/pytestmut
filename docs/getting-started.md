@@ -11,18 +11,14 @@ it next to pytest in your development dependencies.
 === "uv"
 
     ```bash
-    uv add --dev /path/to/pytestmut
+    uv add --dev pytestmut
     ```
 
 === "pip"
 
     ```bash
-    pip install /path/to/pytestmut
+    pip install pytestmut
     ```
-
-!!! note "Not on PyPI yet"
-    Until the first release is published, install from a checkout of the
-    repository as shown above.
 
 Check that it works:
 

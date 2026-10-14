@@ -116,5 +116,5 @@ you which code your tests **check**.
 - Your project's tests must import your source files directly: an editable
   install (`uv sync`, `pip install -e .`) or a layout pytest can import, such
   as `pythonpath = ["src"]`.
-- Tested on macOS with Python 3.10 to 3.13. Linux and Windows are covered by
-  the project's CI workflow; Windows support has not been run there yet.
+- Linux, macOS and Windows, with Python 3.10 to 3.14: the full test suite
+  runs on each in CI.

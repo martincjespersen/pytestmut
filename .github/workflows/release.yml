@@ -1,0 +1,219 @@
+name: Release
+
+# Publishes to PyPI after CI passes on a push to main, when the version in
+# pytestmut/_meta.py is not on PyPI yet. Pushes that keep the version are
+# skipped: PyPI never accepts the same version twice.
+#
+# Order: build and check, publish to TestPyPI, download the wheel TestPyPI
+# serves and check it is the one built, then publish to PyPI and tag a
+# GitHub release. A failure at any step stops the release before PyPI.
+#
+# One-time setup: trusted publishers for this repository with workflow
+# "release.yml", on TestPyPI with environment "testpypi" and on PyPI with
+# environment "pypi".
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check for a new version
+    # Only a successful CI run for a push to main in this repository; never a
+    # pull request, and never a fork's branch that happens to be named main.
+    if: >-
+      github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      # The commit CI tested, not whatever main points to by now.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - id: version
+        run: |
+          version=$(python3 -c 'import re; print(re.search(r"__version__ = \"([^\"]+)\"", open("pytestmut/_meta.py").read()).group(1))')
+          status=$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/pytestmut/$version/json")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$status" = "404" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "Version $version is new: releasing." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$status" = "200" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Version $version is already on PyPI: nothing to release. Bump \`__version__\` in \`pytestmut/_meta.py\` to release." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::PyPI answered $status for version $version"
+            exit 1
+          fi
+
+  build:
+    name: Build and check
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.13"
+      - run: uv build
+      - name: Check the metadata and contents
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          uvx twine check --strict dist/*
+          wheel="dist/pytestmut-$VERSION-py3-none-any.whl"
+          test -f "$wheel" || { echo "::error::expected $wheel"; ls dist; exit 1; }
+          # The test-process shim and report assets are data files that a
+          # packaging mistake would silently drop.
+          python3 - "$wheel" <<'EOF'
+          import sys, zipfile
+          names = set(zipfile.ZipFile(sys.argv[1]).namelist())
+          required = {
+              "pytestmut/_shim/sitecustomize.py",
+              "pytestmut/_shim/_pytestmut_boot.py",
+              "pytestmut/_shim/_pytestmut_recorder.py",
+              "pytestmut/_shim/_pytestmut_tracer.py",
+              "pytestmut/_shim/_pytestmut_probe.py",
+              "pytestmut/report/assets/template.html",
+              "pytestmut/report/assets/logo.svg",
+          }
+          missing = sorted(required - names)
+          if missing:
+              sys.exit(f"missing from the wheel: {missing}")
+          EOF
+      - name: Smoke test the installed wheel
+        run: |
+          project="$RUNNER_TEMP/smoke"
+          mkdir -p "$project/tests"
+          printf 'def add(a, b):\n    return a + b\n' > "$project/calc.py"
+          printf 'from calc import add\n\n\ndef test_add():\n    assert add(2, 3) == 5\n' > "$project/tests/test_calc.py"
+          printf '[tool.pytestmut]\npaths = ["calc.py"]\n\n[tool.pytest.ini_options]\npythonpath = ["."]\n' > "$project/pyproject.toml"
+          uv venv "$project/.venv"
+          uv pip install --python "$project/.venv/bin/python" dist/*.whl
+          cd "$project"
+          .venv/bin/pytestmut --version
+          .venv/bin/pytestmut run --no-cache
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/pytestmut/${{ needs.check.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          # A re-run after a failed PyPI upload finds this version already
+          # on TestPyPI; that must not stop the release.
+          skip-existing: true
+
+  verify-testpypi:
+    name: Install from TestPyPI
+    needs: [check, publish-testpypi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.13"
+      - name: Download the wheel TestPyPI serves and compare it with the build
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          # The index can take a minute to list a new upload.
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if uvx --from pip pip download --no-deps --only-binary :all: \
+                --index-url https://test.pypi.org/simple/ \
+                --dest served "pytestmut==$VERSION"; then
+              break
+            fi
+            if [ "$attempt" = 10 ]; then
+              echo "::error::TestPyPI does not serve pytestmut $VERSION"
+              exit 1
+            fi
+            sleep 30
+          done
+          wheel="pytestmut-$VERSION-py3-none-any.whl"
+          built=$(sha256sum "dist/$wheel" | cut -d' ' -f1)
+          served=$(sha256sum "served/$wheel" | cut -d' ' -f1)
+          if [ "$built" != "$served" ]; then
+            echo "::error::TestPyPI serves a different wheel than this run built"
+            exit 1
+          fi
+      - name: Install the served wheel and run it
+        run: |
+          # Only pytestmut comes from TestPyPI; its dependencies come from
+          # PyPI, so nothing else can be substituted from the test index.
+          uv venv .smoke
+          uv pip install --python .smoke/bin/python served/*.whl
+          .smoke/bin/pytestmut --version
+          .smoke/bin/pytestmut operators > /dev/null
+
+  publish:
+    name: Publish to PyPI
+    needs: [check, verify-testpypi]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/pytestmut/${{ needs.check.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: Tag and create a GitHub release
+    needs: [check, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          gh release create "v$VERSION" dist/* \
+            --repo "${{ github.repository }}" \
+            --target "$SHA" \
+            --title "v$VERSION" \
+            --generate-notes
