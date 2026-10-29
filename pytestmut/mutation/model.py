@@ -146,6 +146,9 @@ class MutantResult:
         detail: Free text for humans, e.g. the tail of the output.
         tests: Node ids of the tests run against the mutant, at most ten.
         hint: What a surviving or unreached mutant asks of the tests.
+        selection: Short digest of exactly which tests were chosen, so a
+            later run can tell whether it chose differently. Empty when no
+            tests ran or the verdict came from the cache.
     """
 
     mutant_id: str
@@ -161,3 +164,4 @@ class MutantResult:
     detail: str = ""
     tests: tuple[str, ...] = ()
     hint: str = ""
+    selection: str = ""

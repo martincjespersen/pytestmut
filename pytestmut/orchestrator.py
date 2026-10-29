@@ -6,23 +6,29 @@ discover -> probe -> generate -> scope -> baseline -> trace -> self-check
 
 from __future__ import annotations
 
+import dataclasses
 import datetime
+import enum
 import hashlib
+import json
 import os
 import platform
 import sys
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, replace
+from pathlib import Path
+from typing import Any
 
 from pytestmut._meta import __version__
 from pytestmut.baseline.runner import Baseline, BaselineRunner
 from pytestmut.baseline.selfcheck import run_self_check
 from pytestmut.baseline.testmap import Selector, TestMap
+from pytestmut.cache.fingerprint import FileHashes, environment_fingerprint
 from pytestmut.cache.store import VerdictCache
 from pytestmut.config.loader import parse_size
-from pytestmut.config.model import Config
+from pytestmut.config.model import CacheConfig, Config, ReportConfig
 from pytestmut.exceptions import (
     BaselineError,
     ConfigError,
@@ -52,7 +58,12 @@ from pytestmut.pytest_integration.probe import (
     run_probe,
 )
 from pytestmut.report.guidance import guidance
-from pytestmut.report.model import BaselineSummary, FileReport, RunResult
+from pytestmut.report.model import (
+    BaselineSummary,
+    FileReport,
+    Provenance,
+    RunResult,
+)
 from pytestmut.source.discovery import Discovery, discover_targets
 from pytestmut.state.statedir import RunDir, StateDir
 from pytestmut.vcs.diffscope import DiffScope, scope_to_diff
@@ -82,6 +93,108 @@ class RunOptions:
     keep_jobs: bool = False
     reached_only: bool = False
     time_limit: float | None = None
+
+
+def _digest(parts: Iterable[str]) -> str:
+    digest = hashlib.sha256()
+    for part in parts:
+        digest.update(part.encode("utf-8", "replace"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _test_files(rootdir: Path, nodeids: Iterable[str]) -> list[Path]:
+    """The files holding these tests, and the conftest files above them."""
+    files: set[Path] = set()
+    for nodeid in nodeids:
+        path = rootdir / nodeid.split("::", 1)[0]
+        files.add(path)
+        for folder in path.parents:
+            files.add(folder / "conftest.py")
+            if folder == rootdir:
+                break
+    return sorted(path for path in files if path.is_file())
+
+
+def _canonical(value: Any) -> Any:
+    """A JSON-ready form that is the same in every process.
+
+    ``repr`` would not do: the order of a set of strings changes with each
+    interpreter's hash seed.
+    """
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        return {
+            item.name: _canonical(getattr(value, item.name))
+            for item in dataclasses.fields(value)
+        }
+    if isinstance(value, dict):
+        return {str(key): _canonical(item) for key, item in value.items()}
+    if isinstance(value, (set, frozenset)):
+        return sorted((_canonical(item) for item in value), key=repr)
+    if isinstance(value, (list, tuple)):
+        return [_canonical(item) for item in value]
+    if isinstance(value, Path):
+        return value.as_posix()
+    if isinstance(value, enum.Enum):
+        return value.value
+    return value
+
+
+def _relocated(config: Config) -> Config:
+    """The configuration as far as it can change a verdict.
+
+    Paths are made relative to the project, so two clones agree, and the
+    cache and report settings are reset: they decide what is reused and
+    written, not what a mutant's tests do.
+    """
+    source = config.config_file
+    if source is not None and source.is_absolute():
+        try:
+            source = source.relative_to(config.root)
+        except ValueError:
+            source = Path(source.name)
+    return replace(
+        config,
+        root=Path("."),
+        config_file=source,
+        cache=CacheConfig(),
+        report=ReportConfig(),
+    )
+
+
+def _provenance(
+    config: Config,
+    run_id: str,
+    git: Git,
+    probe: PytestEnvironment,
+    files: list[FileMutants],
+    baseline: Baseline | None,
+) -> Provenance:
+    """Record what produced this run, to compare it with others later."""
+    hashes = FileHashes()
+    commit, dirty = git.head()
+    tests = ""
+    if baseline is not None:
+        rootdir = probe.rootdir
+        tests = _digest(
+            path.relative_to(rootdir).as_posix() + hashes.of(path)
+            for path in _test_files(rootdir, baseline.nodeids)
+        )
+    return Provenance(
+        run_id=run_id,
+        commit=commit,
+        dirty=dirty,
+        sources=_digest(
+            f"{item.relpath}{item.sha256}"
+            for item in sorted(files, key=lambda item: item.relpath)
+        ),
+        tests=tests,
+        # The project's location is left out, so two clones agree.
+        config=_digest(
+            [json.dumps(_canonical(_relocated(config)), sort_keys=True, default=str)]
+        ),
+        environment=environment_fingerprint(config, probe, hashes),
+    )
 
 
 def _silent(message: str) -> None:
@@ -192,7 +305,17 @@ class Orchestrator:
         runnable = [mutant for mutant in mutants if mutant.runnable]
         if not runnable and (scope.is_diff or not config.fail_on_empty):
             return self._finish(
-                files, mutants, {}, None, scope, started, started_at, probe, (), ()
+                files,
+                mutants,
+                {},
+                None,
+                scope,
+                started,
+                started_at,
+                probe,
+                (),
+                (),
+                provenance=_provenance(config, run_dir.run_id, git, probe, files, None),
             )
         if not runnable:
             raise EmptyScopeError(
@@ -353,6 +476,7 @@ class Orchestrator:
             tuple(failures),
             workers=workers,
             test_map=test_map,
+            provenance=_provenance(config, run_dir.run_id, git, probe, files, baseline),
         )
 
     def _raise_if_cancelled(self) -> None:
@@ -668,6 +792,7 @@ class Orchestrator:
         failures: tuple[str, ...],
         workers: int = 1,
         test_map: TestMap | None = None,
+        provenance: Provenance | None = None,
     ) -> RunResult:
         config = self._config
         issues: list[Issue] = [issue for item in files for issue in item.issues]
@@ -778,6 +903,7 @@ class Orchestrator:
             warnings=tuple(all_warnings),
             failures=tuple(all_failures),
             exit_code=exit_code,
+            provenance=provenance or Provenance(),
         )
 
     @staticmethod

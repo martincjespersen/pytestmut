@@ -16,7 +16,7 @@ SENTINEL_NAME = ".pytestmut-state"
 # Bumped whenever job.json or the record lines change shape.
 WIRE_VERSION = 1
 # Bumped whenever results.json changes shape.
-RESULT_SCHEMA_VERSION = 1
+RESULT_SCHEMA_VERSION = 2
 # Bumped whenever the meaning of a cached verdict changes.
 VERDICT_SEMANTICS_VERSION = 1
 

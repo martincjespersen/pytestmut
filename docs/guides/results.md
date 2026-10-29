@@ -107,6 +107,36 @@ catches the mutant.
 pytestmut exec b40f4160 -- tests/test_pricing.py -x
 ```
 
+## What changed since the last run
+
+Every result records what produced it: a run id, the git commit (and whether
+there were uncommitted changes), and digests of the mutated files, the test
+files, the configuration and the environment. pytestmut keeps the results of
+the last 10 runs in `.pytestmut/history/`, so `show` can say why a verdict
+differs from the previous run:
+
+```text
+b40f41600dd0  cmp.boundary  killed
+src/shop/pricing.py:2  in total  policy default
+run 6e0da60a, commit af444a3d with uncommitted changes, 2026-10-29T09:14:18+00:00
+...
+previously: survived in run c0b500e0, now killed (2026-10-29T09:14:16+00:00)
+changed since: test files changed; different tests selected (1 -> 2)
+```
+
+| Change named | Meaning |
+|---|---|
+| `<file> changed` | The file holding the mutant was edited |
+| `test files changed` | A test file that ran, or a `conftest.py` above it, was edited |
+| `configuration changed` | Settings that affect verdicts changed (cache and report settings don't count) |
+| `environment changed` | pytestmut, Python, an installed package or the pytest setup changed |
+| `different tests selected` | Another set of tests was chosen for the mutant |
+| `re-checked with just the test that killed it before` | A known kill was confirmed with its earlier killing test only |
+| `nothing recorded` | Nothing changed; if the verdict did, the tests are flaky or order-dependent |
+
+A mutant keeps its id across edits elsewhere in its file, so it can be
+followed from run to run.
+
 ## Report formats
 
 Choose formats in the config or per run. `text` goes to the terminal; the

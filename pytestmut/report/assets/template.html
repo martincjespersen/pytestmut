@@ -175,7 +175,7 @@ details.file > summary::-webkit-details-marker { display: none; }
     head.appendChild(el("div", "meta",
       data.mutants + " mutants in " + data.files.length + " file(s), " + data.tests +
       " tests, " + data.workers + " worker(s), " + data.duration.toFixed(1) + "s. Scope: " +
-      data.scope + (data.partial ? " (partial run)" : "") + ". pytestmut " + data.version +
+      data.scope + (data.partial ? " (partial run)" : "") + ". " + data.run + ". pytestmut " + data.version +
       ", Python " + data.python + ", pytest " + data.pytest + ". " + data.started));
   }
 

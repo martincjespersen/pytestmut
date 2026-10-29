@@ -106,7 +106,20 @@ Useful fields:
 | `hint` | `results[id]` | The guidance paragraph |
 | `tests` | `results[id]` | Tests that ran against the mutant (up to 10) |
 | `killing_test` | `results[id]` | The test that caught it, for kills |
+| `from_cache` | `results[id]` | True when the verdict was reused, not re-run |
+| `selection` | `results[id]` | Digest of exactly which tests were chosen |
+| `provenance` | top level | Run id, commit, dirty flag, and digests of sources, tests, configuration and environment |
 | `exit_code`, `failures`, `policies` | top level | The overall outcome |
+
+### Telling your fix apart from a changed run
+
+When a verdict changes between two runs, compare their `provenance` blocks and
+the mutant's `selection`: they say whether the code, the tests, the
+configuration, the environment or the choice of tests changed.
+`pytestmut show <id>` does this for you against the previous run, and the
+results of the last 10 runs are kept in `.pytestmut/history/<run id>.json`.
+A verdict that changed while nothing recorded did points at a flaky or
+order-dependent test, not at your change.
 
 ## Instructions to give the agent
 

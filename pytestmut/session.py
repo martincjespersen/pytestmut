@@ -148,9 +148,12 @@ def run_and_report(
         err("pytestmut: interrupted")
         return INTERRUPTED
     console.close()
+    serialised = to_json(result)
     orchestrator.state.results_file.write_text(
-        to_json(result), encoding="utf-8", newline="\n"
+        serialised, encoding="utf-8", newline="\n"
     )
+    if result.provenance.run_id:
+        orchestrator.state.archive(serialised, result.provenance.run_id)
     formats = config.report.formats
     if "text" in formats:
         out(render(result, "text", show_suppressed=show_suppressed))

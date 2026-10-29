@@ -66,6 +66,33 @@ class BaselineSummary:
 
 
 @dataclass(frozen=True)
+class Provenance:
+    """What produced a run, so that two runs can be told apart.
+
+    When a mutant's verdict differs between two runs, comparing these says
+    whether the code, the tests, the configuration or the environment changed.
+
+    Attributes:
+        run_id: Unique id of the run.
+        commit: Git commit checked out, or empty outside a repository.
+        dirty: True when tracked files differed from that commit.
+        sources: Digest of the contents of the files being mutated.
+        tests: Digest of the test files that ran and their conftest files.
+        config: Digest of the effective configuration.
+        environment: Digest of the tool, interpreter, installed packages and
+            pytest setup.
+    """
+
+    run_id: str = ""
+    commit: str = ""
+    dirty: bool = False
+    sources: str = ""
+    tests: str = ""
+    config: str = ""
+    environment: str = ""
+
+
+@dataclass(frozen=True)
 class RunResult:
     """Everything a report needs.
 
@@ -88,6 +115,7 @@ class RunResult:
         warnings: Things the user should know.
         failures: Reasons the run failed apart from policy thresholds.
         exit_code: Process exit code of the run.
+        provenance: What produced the run.
     """
 
     schema: int = RESULT_SCHEMA_VERSION
@@ -108,6 +136,17 @@ class RunResult:
     warnings: tuple[str, ...] = ()
     failures: tuple[str, ...] = ()
     exit_code: int = 0
+    provenance: Provenance = field(default_factory=Provenance)
+
+    def run_label(self) -> str:
+        """Which run this is, e.g. ``run 1a2b3c4d, commit 9f8e7d6c``."""
+        provenance = self.provenance
+        label = f"run {provenance.run_id or 'unknown'}"
+        if provenance.commit:
+            label += f", commit {provenance.commit[:8]}"
+            if provenance.dirty:
+                label += " with uncommitted changes"
+        return label
 
     def status_of(self, mutant: Mutant) -> Status:
         """Final status of a mutant."""
@@ -195,6 +234,11 @@ def _policy(data: dict[str, Any]) -> PolicyResult:
     return PolicyResult(**known)
 
 
+def _provenance(data: dict[str, Any]) -> Provenance:
+    fields = {item.name for item in dataclasses.fields(Provenance)}
+    return Provenance(**{key: value for key, value in data.items() if key in fields})
+
+
 def from_json(text: str) -> RunResult:
     """Parse a serialised result.
 
@@ -251,6 +295,7 @@ def from_json(text: str) -> RunResult:
             warnings=tuple(data.get("warnings", ())),
             failures=tuple(data.get("failures", ())),
             exit_code=data.get("exit_code", 0),
+            provenance=_provenance(data.get("provenance", {})),
         )
     except (ValueError, KeyError, TypeError) as exc:
         raise ConfigError(f"cannot read results: {exc}") from exc

@@ -77,7 +77,8 @@ def render_markdown(result: RunResult, max_survivors: int = 50) -> str:
         "",
         f"{len(result.mutants)} mutants in {len(result.files)} file(s), "
         f"{result.baseline.tests} tests, {result.baseline.workers} worker(s), "
-        f"{result.duration_s:.1f}s. Scope: {result.scope}.",
+        f"{result.duration_s:.1f}s. Scope: {result.scope}. "
+        f"{result.run_label().capitalize()}.",
     ]
     if result.partial:
         lines += ["", "**Partial run:** some mutants were not run."]

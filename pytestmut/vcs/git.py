@@ -60,6 +60,20 @@ class Git:
             return 127, ""
         return completed.returncode, completed.stdout.decode("utf-8", "replace")
 
+    def head(self) -> tuple[str, bool]:
+        """The commit checked out, and whether tracked files differ from it.
+
+        Returns:
+            The commit id and the dirty flag; an empty id outside a repository
+            or before the first commit.
+        """
+        code, out = self._run("rev-parse", "--verify", "--quiet", "HEAD")
+        commit = out.strip() if code == 0 else ""
+        if not commit:
+            return "", False
+        code, out = self._run("status", "--porcelain=v1", "--untracked-files=no")
+        return commit, code == 0 and bool(out.strip())
+
     def toplevel(self) -> Path | None:
         """Root of the working tree, or None outside a repository."""
         code, out = self._run("rev-parse", "--show-toplevel")

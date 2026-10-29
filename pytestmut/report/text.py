@@ -161,6 +161,7 @@ def render_text(result: RunResult, show_suppressed: bool = False) -> str:
         f"pytestmut {result.tool_version}: {len(result.mutants)} mutants in "
         f"{len(result.files)} file(s), {result.baseline.tests} tests, "
         f"{result.baseline.workers} worker(s), {result.duration_s:.1f}s",
+        result.run_label(),
     ]
     if result.scope != "full":
         lines.append(f"scope: {result.scope}")
