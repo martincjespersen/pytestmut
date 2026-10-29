@@ -467,6 +467,20 @@ def test_random_ordering_is_switched_off(tmp_path: Path) -> None:
     )
 
 
+def test_testmon_is_blocked_and_its_flags_dropped(tmp_path: Path) -> None:
+    probe = _probe(
+        ini_addopts=("--testmon", "--testmon-env", "ci", "-q"),
+        env_addopts=("--testmon-env=local", "--tmnet"),
+        plugins={"pytest-testmon": "2.2"},
+    )
+    argv = build_argv(probe, PytestConfig(), tmp_path)
+    assert "no:pytest-testmon" in argv
+    assert "-q" in argv
+    for gone in ("--testmon", "--testmon-env", "--testmon-env=local", "--tmnet"):
+        assert gone not in argv
+    assert "ci" not in argv and "local" not in argv
+
+
 def test_worker_and_budget_defaults() -> None:
     assert effective_cpus() >= 1
     assert cpu_workers(3) == 3 and cpu_workers(None) == effective_cpus()

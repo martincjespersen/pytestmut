@@ -49,6 +49,14 @@ STRIPPED_FLAGS = frozenset(
         "--json-report",
         "--mutate",
         "--mutate-reached",
+        # pytest-testmon, which is blocked: it selects tests by comparing the
+        # files on disk with its database, and mutants never touch the disk.
+        "--testmon",
+        "--testmon-noselect",
+        "--testmon-nocollect",
+        "--testmon-forceselect",
+        "--no-testmon",
+        "--tmnet",
     }
 )
 # Flags that take a value and write a report file into the tree.
@@ -63,6 +71,7 @@ STRIPPED_VALUE_FLAGS = frozenset(
         "--mutate-level",
         "--mutate-min-score",
         "--mutate-diff",
+        "--testmon-env",
     }
 )
 
@@ -135,6 +144,9 @@ def build_argv(
         argv += ["--randomly-seed=1", "--randomly-dont-reorganize"]
     else:
         argv += ["-p", "no:randomly"]
+    # testmon would deselect every test a mutant needs (its files on disk are
+    # unchanged) and write mutant runs into the project's .testmondata.
+    argv += ["-p", "no:pytest-testmon"]
     if not any(token.startswith("--random-order") for token in inherited):
         argv += ["-p", "no:random_order"]
     elif probe.has_plugin("pytest-random-order"):

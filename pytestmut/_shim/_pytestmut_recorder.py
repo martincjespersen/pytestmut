@@ -35,6 +35,7 @@ _UNSAFE_OPTIONS = {
     "force_regen": "--force-regen",
     "regen_all": "--regen-all",
     "xmlpath": "--junitxml",
+    "testmon": "--testmon",
 }
 _MESSAGE_LIMIT = 600
 _session: Any = None
