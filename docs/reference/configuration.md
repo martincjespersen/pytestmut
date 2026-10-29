@@ -41,6 +41,12 @@ Removed from inherited options: `--lf`, `--ff`, `--nf`, `--sw`, `--pdb`,
 such as `--junitxml` and `--html`. xdist is forced to `-n 0`, coverage is
 switched off with `--no-cov`, and random ordering is disabled.
 
+pytest-testmon is blocked, and its options (`--testmon`, `--testmon-env` and
+the rest) are removed. testmon picks tests by comparing files on disk with its
+`.testmondata` database, but mutants are applied in memory, so it would leave
+out every test a mutant needs. Your database is never read or written, and
+`pytest --testmon` keeps working as before.
+
 ## `[tool.pytestmut.run]`
 
 | Key | Default | Meaning |

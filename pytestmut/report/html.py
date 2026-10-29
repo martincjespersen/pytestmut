@@ -63,6 +63,7 @@ def _payload(result: RunResult, embed_source: bool) -> dict[str, Any]:
     return {
         "version": result.tool_version,
         "started": result.started_at,
+        "run": result.run_label(),
         "duration": result.duration_s,
         "python": result.python,
         "pytest": result.pytest,

@@ -59,6 +59,10 @@ class RunDir:
         return path
 
 
+# Results of this many recent runs are kept, for comparing verdicts.
+RUNS_KEPT = 10
+
+
 class StateDir:
     """Creates, locks and cleans the state directory.
 
@@ -84,6 +88,33 @@ class StateDir:
     def results_file(self) -> Path:
         """Where the canonical result of the last run is kept."""
         return self._path / "results.json"
+
+    @property
+    def history_dir(self) -> Path:
+        """Where the results of recent runs are kept, one file per run."""
+        return self._path / "history"
+
+    def archive(self, text: str, run_id: str, keep: int = RUNS_KEPT) -> Path:
+        """Keep a run's result, dropping all but the most recent ``keep``.
+
+        Arguments:
+            text: The serialised result.
+            run_id: Id of the run, used as the file name.
+            keep: How many results to keep in total.
+
+        Returns:
+            The file written.
+        """
+        self.history_dir.mkdir(parents=True, exist_ok=True)
+        target = self.history_dir / f"{run_id}.json"
+        target.write_text(text, encoding="utf-8", newline="\n")
+        older = sorted(
+            (path for path in self.history_dir.glob("*.json") if path != target),
+            key=lambda path: path.stat().st_mtime,
+        )
+        for path in older[: max(0, len(older) - (keep - 1))]:
+            path.unlink(missing_ok=True)
+        return target
 
     @property
     def cache_file(self) -> Path:
@@ -155,6 +186,7 @@ class StateDir:
         Returns:
             The scratch space of the new run.
         """
+        # Scratch space of versions before 0.1.0; history lives elsewhere.
         self.remove(self._path / "runs")
         parent = (
             Path(tmp_root).expanduser() if tmp_root else Path(tempfile.gettempdir())

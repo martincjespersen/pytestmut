@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from pytestmut._meta import RESULT_SCHEMA_VERSION
 from pytestmut.mutation.model import Status
 from tests.conftest import ProjectFactory, git, run_tool
 
@@ -220,7 +221,8 @@ def test_reports_are_written_and_rerendered(make_project: ProjectFactory) -> Non
     assert html.startswith("<!doctype html>") and "__DATA__" not in html
     assert "app/billing.py" in html and "http://" not in html and "https://" not in html
     data = json.loads((reports / "report.json").read_text(encoding="utf-8"))
-    assert data["schema"] == 1 and len(data["mutants"]) == len(run.result.mutants)
+    assert data["schema"] == RESULT_SCHEMA_VERSION
+    assert len(data["mutants"]) == len(run.result.mutants)
     again = run_tool(root, "report", "--format", "markdown")
     assert again.exit_code == 0 and "## Mutation testing" in again.stdout
 
@@ -467,3 +469,52 @@ def test_report_formats_carry_the_guidance(make_project: ProjectFactory) -> None
     assert entry["tests"] == ["tests/test_agent.py::test_invoice_total"]
     shown = run_tool(root, "show", survivor.id)
     assert "went unnoticed" in shown.stdout
+
+
+def test_show_explains_why_a_verdict_changed_between_runs(
+    make_project: ProjectFactory,
+) -> None:
+    root = make_project(
+        {
+            "pyproject.toml": '[tool.pytestmut]\npaths = ["calc.py"]\n',
+            "calc.py": "def is_adult(age):\n    return age >= 18\n",
+            "tests/test_calc.py": textwrap.dedent("""\
+                from calc import is_adult
+
+
+                def test_adult():
+                    assert is_adult(30)
+                    assert not is_adult(5)
+                """),
+        }
+    )
+    git(root, "init", "-q")
+    git(root, "add", "-A")
+    git(root, "commit", "-qm", "start")
+    first = run_tool(root, "run")
+    survivor = next(
+        mutant
+        for mutant in first.result.with_status(Status.SURVIVED)
+        if mutant.operator == "cmp.boundary"
+    )
+    provenance = first.result.provenance
+    assert provenance.run_id and len(provenance.commit) == 40
+    assert not provenance.dirty
+    assert first.result.results[survivor.id].selection
+    # What a coding agent does next: add the missing boundary test.
+    with (root / "tests" / "test_calc.py").open("a", encoding="utf-8") as handle:
+        handle.write(
+            "\n\ndef test_boundary():\n"
+            "    assert is_adult(18)\n"
+            "    assert not is_adult(17)\n"
+        )
+    second = run_tool(root, "run")
+    assert second.result.status_of(survivor) is Status.KILLED
+    assert second.result.provenance.tests != provenance.tests
+    assert second.result.provenance.dirty
+    shown = run_tool(root, "show", survivor.id).stdout
+    assert f"previously: survived in run {provenance.run_id}, now killed" in shown
+    assert "test files changed" in shown
+    assert "uncommitted changes" in shown
+    history = root / ".pytestmut" / "history"
+    assert len(list(history.glob("*.json"))) == 2

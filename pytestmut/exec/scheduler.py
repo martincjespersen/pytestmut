@@ -18,6 +18,7 @@ each ambiguous outcome gets a follow-up before it is final:
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import queue
 import threading
 import time
@@ -44,11 +45,27 @@ BUDGET_EXHAUSTED = "time budget exhausted"
 # Test ids kept per verdict, enough to point at the tests to improve.
 LISTED_TESTS = 10
 _MAX_ROUNDS = 4
+_SELECTION_DIGEST_CHARS = 12
 # Outcomes of a whole-suite mutant's reaching tests that need no full run; the
 # usual confirmations still apply to them.
 _PROBE_SETTLES = frozenset({Status.KILLED, Status.TIMEOUT, Status.OOM})
 _THROTTLE_SAMPLE = 50
 _THROTTLE_RATIO = 0.10
+
+
+def selection_digest(nodeids: Sequence[str]) -> str:
+    """Short digest of a set of tests, independent of their order.
+
+    Arguments:
+        nodeids: Node ids of the selected tests.
+
+    Returns:
+        Hex digits, or an empty string for no tests.
+    """
+    if not nodeids:
+        return ""
+    digest = hashlib.sha256("\n".join(sorted(set(nodeids))).encode("utf-8"))
+    return digest.hexdigest()[:_SELECTION_DIGEST_CHARS]
 
 
 @dataclass(frozen=True)
@@ -424,4 +441,5 @@ class MutantExecutor:
             attempts=attempts,
             detail=verdict.detail,
             tests=tuple(selected[:LISTED_TESTS]),
+            selection=selection_digest(selected),
         )

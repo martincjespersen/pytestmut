@@ -20,6 +20,7 @@ from pytestmut.exec.jobs import MUTATE, Job, identify, write_job
 from pytestmut.mutation.model import Mutant, Status
 from pytestmut.mutation.registry import OPERATORS
 from pytestmut.orchestrator import RunOptions
+from pytestmut.report.history import history_lines
 from pytestmut.report.model import RunResult, load_result
 from pytestmut.report.render import render
 from pytestmut.report.source import SourceCache
@@ -329,11 +330,12 @@ def show(
         pytestmut show 3c494f7a
     """
     try:
-        _, result = _result(config)
+        cfg, result = _result(config)
         found = _find(result, mutant)
     except PytestmutError as exc:
         raise _fail(exc) from exc
     before, after = SourceCache(result).diff(found)
+    runs_dir = StateDir(cfg.root, cfg.state_dir).history_dir
     verdict = result.results.get(found.id)
     status = result.status_of(found)
     lines = [
@@ -341,6 +343,7 @@ def show(
         f"{found.path}:{found.span.line}"
         + (f"  in {found.scope}" if found.scope else "")
         + f"  policy {found.policy}",
+        f"{result.run_label()}, {result.started_at}",
         "",
         *[f"- {line}" for line in before],
         *[f"+ {line}" for line in after],
@@ -356,12 +359,15 @@ def show(
         lines.append(
             f"tests selected: {verdict.tests_selected}, run: {verdict.tests_run}, "
             f"attempts: {verdict.attempts}, {verdict.duration_s:.2f}s"
-            + (", from cache" if verdict.from_cache else "")
+            + (", reused from the cache, not re-run" if verdict.from_cache else "")
         )
         if verdict.detail:
             lines += ["", verdict.detail.strip()]
     if verdict is not None and verdict.hint:
         lines += ["", verdict.hint]
+    history = history_lines(found, result, runs_dir)
+    if history:
+        lines += ["", *history]
     if status is Status.SURVIVED:
         lines += ["", f"reproduce: pytestmut exec {found.id} -- -x"]
     typer.echo("\n".join(lines))

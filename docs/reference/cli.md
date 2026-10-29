@@ -63,7 +63,9 @@ pytestmut report --format json                        # for scripts
 
 ## pytestmut show
 
-One mutant: the change, what happened, and what test would catch it.
+One mutant: the change, what happened, and what test would catch it. When an
+earlier run in `.pytestmut/history/` has the same mutant, it also says how the
+mutant fared then and what changed since.
 
 ```bash
 pytestmut show 7bf19b97

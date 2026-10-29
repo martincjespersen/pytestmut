@@ -415,3 +415,41 @@ def test_time_limit_ends_the_run_with_a_partial_report(
     # Mutants that never ran must not let the run pass.
     assert run.exit_code == 1
     assert "hit its time limit" in run.stderr + run.stdout
+
+
+def test_testmon_neither_selects_tests_nor_touches_its_database(
+    make_project: ProjectFactory,
+) -> None:
+    pytest.importorskip("testmon")
+    root = make_project(
+        {
+            "pyproject.toml": """\
+                [tool.pytest.ini_options]
+                addopts = "--testmon"
+
+                [tool.pytestmut]
+                paths = ["calc.py"]
+            """,
+            "calc.py": CALC,
+            "tests/test_calc.py": CALC_TESTS,
+        }
+    )
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PYTEST")}
+    # A testmon user has a database: from now on testmon deselects every test
+    # whose files are unchanged on disk, and mutants never change the disk.
+    # (testmon needs pytest's cache plugin, so it stays enabled here.)
+    first = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert first.returncode == 0, first.stdout
+    database = root / ".testmondata"
+    before = database.read_bytes()
+    run = run_tool(root, "run", "--no-cache")
+    assert run.exit_code == 0, run.stderr
+    assert run.status(2, "arith.add_sub") == "killed"
+    assert set(run.statuses()) == {"killed"}
+    assert database.read_bytes() == before
