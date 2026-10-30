@@ -196,7 +196,9 @@ class StateDir:
         _sweep_stale(parent)
         run_id = uuid.uuid4().hex[:8]
         path = parent / f"{TOOL_NAME}-{run_id}"
-        path.mkdir()
+        # Private, like tempfile.mkdtemp: the system temp directory is shared,
+        # and the tests' own temporary files end up in here.
+        path.mkdir(mode=0o700)
         marker = {"tool": TOOL_NAME, "run": run_id, "pid": os.getpid()}
         (path / SENTINEL_NAME).write_text(json.dumps(marker), encoding="utf-8")
         (path / "j").mkdir()
@@ -268,9 +270,9 @@ def _is_scratch(path: Path) -> bool:
 def _sweep_stale(parent: Path) -> None:
     """Delete scratch space left behind by runs whose process is gone."""
     for item in parent.glob(f"{TOOL_NAME}-*"):
-        if not _is_scratch(item):
-            continue
         try:
+            if not _is_scratch(item):
+                continue
             marker = json.loads((item / SENTINEL_NAME).read_text(encoding="utf-8"))
             owner = int(marker.get("pid", 0))
         except (OSError, ValueError, AttributeError, TypeError):

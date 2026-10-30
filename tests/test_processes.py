@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -232,6 +233,8 @@ def test_scratch_space_is_outside_the_project(tmp_path: Path) -> None:
         # Tests walking up from their temp directory must not reach the project.
         assert project.resolve() not in run.path.parents
         assert run.path.parent == Path(tempfile.gettempdir()).resolve()
+        if sys.platform != "win32":
+            assert stat.S_IMODE(run.path.stat().st_mode) == 0o700
         job = run.job_dir("m1")
         assert (job / "rec").is_dir() and (job / "tmp").is_dir()
         state.remove_job(run, "m1")
@@ -268,6 +271,27 @@ def test_scratch_parent_can_be_configured_and_is_swept(tmp_path: Path) -> None:
     state.remove_scratch(RunDir("x", foreign))
     state.remove_job(RunDir("x", foreign), "keep.txt")
     assert (foreign / "keep.txt").exists()
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32" or os.geteuid() == 0,
+    reason="POSIX permissions, which root ignores",
+)
+def test_sweep_skips_scratch_space_it_cannot_read(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    parent = tmp_path / "scratch"
+    unreadable = parent / "pytestmut-0th3ru5r"
+    unreadable.mkdir(parents=True)
+    unreadable.chmod(0)
+    state = StateDir(project, ".pytestmut")
+    state.ensure()
+    try:
+        run = state.new_run(str(parent))
+    finally:
+        unreadable.chmod(0o700)
+    state.remove_scratch(run)
+    assert unreadable.is_dir()
 
 
 def test_state_directory_refuses_unsafe_locations(tmp_path: Path) -> None:
