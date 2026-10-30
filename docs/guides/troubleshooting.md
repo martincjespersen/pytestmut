@@ -136,6 +136,12 @@ selector, or set `allow_empty = true` on the policy.
 so it can never delete your files. Choose another `state_dir`, or remove that
 folder yourself.
 
+### "state directory ...: must not be the project root or contain it"
+
+`state_dir` names the project itself or a folder above it, possibly through a
+symlink. pytestmut refuses to use or clean such a folder, even when it carries
+a `.pytestmut-state` marker. Point `state_dir` at a folder of its own.
+
 ### "in use by another run (pid N)"
 
 Another pytestmut run is using the same project. Wait for it. If no such

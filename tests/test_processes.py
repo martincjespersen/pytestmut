@@ -273,9 +273,6 @@ def test_scratch_parent_can_be_configured_and_is_swept(tmp_path: Path) -> None:
 def test_state_directory_refuses_unsafe_locations(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
-    for location in (".", "..", str(tmp_path)):
-        with pytest.raises(StateDirError, match="project root"):
-            StateDir(project, location).ensure()
     foreign = project / "data"
     foreign.mkdir()
     (foreign / "keep.txt").write_text("precious", encoding="utf-8")
@@ -292,6 +289,28 @@ def test_state_directory_refuses_unsafe_locations(tmp_path: Path) -> None:
         link.symlink_to(foreign)
         with pytest.raises(StateDirError, match="symlink"):
             StateDir(project, "link").ensure()
+
+
+def test_state_directory_refuses_the_project_and_its_parents(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "app.py").write_text("x = 1\n", encoding="utf-8")
+    for folder in (project, tmp_path):
+        (folder / SENTINEL_NAME).write_text("{}", encoding="utf-8")
+    locations = [".", "..", str(tmp_path)]
+    if sys.platform != "win32":
+        (project / "up").symlink_to(tmp_path, target_is_directory=True)
+        locations.append("up/project")
+    case_insensitive = (tmp_path / "PROJECT").exists()
+    if case_insensitive:
+        locations.append("../PROJECT")
+    for location in locations:
+        state = StateDir(project, location)
+        with pytest.raises(StateDirError, match="project root"):
+            state.clean()
+        with pytest.raises(StateDirError, match="project root"):
+            state.ensure()
+    assert (project / "app.py").read_text(encoding="utf-8") == "x = 1\n"
 
 
 def test_state_directory_only_deletes_inside_itself(tmp_path: Path) -> None:
