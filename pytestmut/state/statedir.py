@@ -128,6 +128,21 @@ class StateDir:
     def _refuse(self, why: str) -> StateDirError:
         return StateDirError(f"state directory {self._path}: {why}")
 
+    def _refuse_if_contains_project(self) -> None:
+        """Refuse a state directory that is the project root or one of its parents.
+
+        The directories themselves are compared, not only their paths, so a
+        symlink on the way or a name in different case on a case-insensitive
+        file system cannot hide the project.
+        """
+        try:
+            stat = os.stat(self._path)
+        except OSError:
+            return
+        for folder in (self._root, *self._root.parents):
+            if os.path.samestat(stat, os.stat(folder)):
+                raise self._refuse("must not be the project root or contain it")
+
     def ensure(self) -> None:
         """Create the directory, or check that an existing one is ours.
 
@@ -135,8 +150,7 @@ class StateDir:
             StateDirError: If the path is the project itself, contains it, is
                 a symlink, or exists without the sentinel.
         """
-        if self._path == self._root or self._path in self._root.parents:
-            raise self._refuse("must not be the project root or contain it")
+        self._refuse_if_contains_project()
         if self._path.is_symlink():
             raise self._refuse("must not be a symlink")
         if self._path.exists():
@@ -248,10 +262,12 @@ class StateDir:
             True when something was deleted.
 
         Raises:
-            StateDirError: If the directory exists without the sentinel.
+            StateDirError: If the directory is the project itself, contains
+                it, is a symlink, or exists without the sentinel.
         """
         if not self._path.exists():
             return False
+        self._refuse_if_contains_project()
         if self._path.is_symlink():
             raise self._refuse("is a symlink; refusing to delete")
         if not (self._path / SENTINEL_NAME).is_file():
